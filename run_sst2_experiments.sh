@@ -9,7 +9,7 @@ mkdir -p $OUTPUT_DIR
 
 # Run baseline experiment (standard attention)
 echo "Running baseline experiment..."
-python src/scripts/train.py \
+python src/scripts/train_glue.py \
     --task sst2 \
     --data_dir ./data \
     --output_dir $OUTPUT_DIR/baseline \
@@ -26,7 +26,7 @@ python src/scripts/train.py \
 # Run OSPA with regularization (different penalty weights)
 for penalty in 0.001 0.01 0.1; do
     echo "Running OSPA with regularization (penalty = $penalty)..."
-    python src/scripts/train.py \
+    python src/scripts/train_glue.py \
         --task sst2 \
         --data_dir ./data \
         --output_dir $OUTPUT_DIR/ospa_regularize_${penalty} \
@@ -43,7 +43,7 @@ done
 
 # Run OSPA with strict orthogonalization
 echo "Running OSPA with strict orthogonalization..."
-python src/scripts/train.py \
+python src/scripts/train_glue.py \
     --task sst2 \
     --data_dir ./data \
     --output_dir $OUTPUT_DIR/ospa_strict \
