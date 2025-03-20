@@ -203,4 +203,128 @@ class OSPATransformer(nn.Module):
             activation, enforce_mode, norm_first, device=device, dtype=dtype
         )
         encoder_norm = nn.LayerNorm(d_model, **factory_kwargs)
-        self.encoder = OSPATransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm
+        self.encoder = OSPATransformerEncoder(encoder_layer, num_encoder_layers, encoder_norm)
+        
+        # Create decoder if needed
+        if use_decoder:
+            decoder_layer = OSPADecoderLayer(
+                d_model, nhead, dim_feedforward, dropout,
+                activation, enforce_mode, norm_first, device=device, dtype=dtype
+            )
+            decoder_norm = nn.LayerNorm(d_model, **factory_kwargs)
+            self.decoder = OSPATransformerDecoder(decoder_layer, num_decoder_layers, decoder_norm)
+        else:
+            self.decoder = None
+    
+    def encode(self, src, src_mask=None, src_key_padding_mask=None):
+        """
+        Encode input sequence.
+        
+        Args:
+            src: Input sequence of shape (batch_size, seq_len, d_model)
+            src_mask: Attention mask
+            src_key_padding_mask: Key padding mask
+            
+        Returns:
+            Encoded sequence and attention weights
+        """
+        # Add positional encoding
+        src = self.pos_encoder(src)
+        
+        # Pass through encoder
+        memory, encoder_attentions = self.encoder(
+            src, mask=src_mask, src_key_padding_mask=src_key_padding_mask
+        )
+        
+        return memory, encoder_attentions
+    
+    def decode(self, tgt, memory, tgt_mask=None, memory_mask=None,
+              tgt_key_padding_mask=None, memory_key_padding_mask=None):
+        """
+        Decode encoded sequence.
+        
+        Args:
+            tgt: Target sequence of shape (batch_size, tgt_len, d_model)
+            memory: Memory from encoder
+            tgt_mask: Target attention mask
+            memory_mask: Memory attention mask
+            tgt_key_padding_mask: Target key padding mask
+            memory_key_padding_mask: Memory key padding mask
+            
+        Returns:
+            Decoded sequence and attention weights
+        """
+        if not self.use_decoder:
+            raise ValueError("Model was configured without a decoder.")
+        
+        # Add positional encoding
+        tgt = self.pos_encoder(tgt)
+        
+        # Pass through decoder
+        output, (self_attentions, cross_attentions) = self.decoder(
+            tgt, memory,
+            tgt_mask=tgt_mask,
+            memory_mask=memory_mask,
+            tgt_key_padding_mask=tgt_key_padding_mask,
+            memory_key_padding_mask=memory_key_padding_mask
+        )
+        
+        return output, (self_attentions, cross_attentions)
+    
+    def forward(self, src, tgt=None, src_mask=None, tgt_mask=None,
+               memory_mask=None, src_key_padding_mask=None,
+               tgt_key_padding_mask=None, memory_key_padding_mask=None):
+        """
+        Forward pass for OSPA transformer.
+        
+        For encoder-only tasks, provide only src.
+        For seq2seq tasks, provide both src and tgt.
+        
+        Args:
+            src: Source sequence
+            tgt: Optional target sequence (for seq2seq tasks)
+            src_mask: Source attention mask
+            tgt_mask: Target attention mask
+            memory_mask: Memory attention mask
+            src_key_padding_mask: Source key padding mask
+            tgt_key_padding_mask: Target key padding mask
+            memory_key_padding_mask: Memory key padding mask
+            
+        Returns:
+            Output sequence and attention weights
+        """
+        # Encode source sequence
+        memory, encoder_attentions = self.encode(
+            src, src_mask=src_mask, src_key_padding_mask=src_key_padding_mask
+        )
+        
+        # If decoder is used and target is provided, decode
+        if self.use_decoder and tgt is not None:
+            output, (decoder_self_attentions, decoder_cross_attentions) = self.decode(
+                tgt, memory,
+                tgt_mask=tgt_mask,
+                memory_mask=memory_mask,
+                tgt_key_padding_mask=tgt_key_padding_mask,
+                memory_key_padding_mask=memory_key_padding_mask
+            )
+            return output, {
+                'encoder_attentions': encoder_attentions,
+                'decoder_self_attentions': decoder_self_attentions,
+                'decoder_cross_attentions': decoder_cross_attentions
+            }
+        else:
+            # Encoder-only model
+            return memory, {'encoder_attentions': encoder_attentions}
+    
+    def get_orthogonality_penalty(self):
+        """
+        Calculate total orthogonality penalty for the model.
+        
+        This is used for regularization during training.
+        """
+        penalty = self.encoder.get_orthogonality_penalty()
+        
+        if self.use_decoder:
+            penalty += self.decoder.get_orthogonality_penalty()
+        
+        return self.ortho_penalty_weight * penalty
