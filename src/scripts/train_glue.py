@@ -139,6 +139,11 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
     
     pbar = tqdm(dataloader, desc="Training")
     for batch in pbar:
+        # Check if batch is a dictionary or list
+        if isinstance(batch, list):
+            # Convert list to appropriate format if needed
+            batch = {k: torch.stack([item[k] for item in batch]) for k in batch[0].keys()}
+        
         # Move batch to device
         input_ids = batch['input_ids'].to(device)
         attention_mask = batch['attention_mask'].to(device)
@@ -216,6 +221,11 @@ def evaluate(model, dataloader, criterion, device, metric_name=None):
     
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Evaluating"):
+            # Check if batch is a dictionary or list
+            if isinstance(batch, list):
+                # Convert list to appropriate format if needed
+                batch = {k: torch.stack([item[k] for item in batch]) for k in batch[0].keys()}
+                        
             # Move batch to device
             input_ids = batch['input_ids'].to(device)
             attention_mask = batch['attention_mask'].to(device)
@@ -318,7 +328,9 @@ def main(args):
         lambda examples: tokenize_function(examples, tokenizer, args.max_seq_length),
         batched=True
     )
-    
+
+    # Convert to PyTorch tensors format
+    tokenized_datasets = tokenized_datasets.with_format("torch")
     # Prepare data splits
     train_dataset = tokenized_datasets['train']
     if 'validation' in tokenized_datasets:
