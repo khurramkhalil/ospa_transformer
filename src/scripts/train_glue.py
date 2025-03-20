@@ -22,8 +22,8 @@ from datasets import load_dataset, load_from_disk
 import evaluate
 
 # Import project modules
-from models.transformer import OSPATransformer
-import utils.logging as logging
+from src.models.transformer import OSPATransformer
+import src.utils.logging as logging
 
 
 class SequenceClassifier(nn.Module):
