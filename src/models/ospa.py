@@ -51,7 +51,7 @@ class OrthogonalLinear(nn.Module):
     either through regularization or direct orthogonalization.
     """
     
-    def __init__(self, in_features, out_features, bias=True, enforce_mode='regularize'):
+    def __init__(self, in_features, out_features, bias=True, enforce_mode='regularize', device=None, dtype=None):
         """
         Initialize orthogonal linear layer.
         
@@ -63,6 +63,8 @@ class OrthogonalLinear(nn.Module):
                 - 'strict': Apply Gram-Schmidt in forward pass
                 - 'regularize': Add regularization term to loss
                 - 'init': Only initialize orthogonally
+            device: Device for computation
+            dtype: Data type for computation
         """
         super(OrthogonalLinear, self).__init__()
         self.in_features = in_features
@@ -70,12 +72,11 @@ class OrthogonalLinear(nn.Module):
         self.enforce_mode = enforce_mode
         
         # Initialize weights orthogonally
-        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
+        self.weight = nn.Parameter(torch.empty(out_features, in_features, device=device, dtype=dtype))
         nn.init.orthogonal_(self.weight)
         
         if bias:
-            self.bias = nn.Parameter(torch.Tensor(out_features))
-            nn.init.zeros_(self.bias)
+            self.bias = nn.Parameter(torch.zeros(out_features, device=device, dtype=dtype))
         else:
             self.register_parameter('bias', None)
     
