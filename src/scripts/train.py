@@ -19,7 +19,8 @@ from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from transformers import AutoTokenizer, GlueDataset, GlueDataTrainingArguments
-from datasets import load_dataset, load_metric
+from datasets import load_dataset
+from evaluate import load as load_metric
 
 from src.models.transformer import OSPATransformer
 import src.utils.logging as logging
