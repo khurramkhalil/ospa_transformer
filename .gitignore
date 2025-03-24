@@ -32,3 +32,5 @@ build/
 saved_models/
 
 .DS_Store/
+data/
+data/*
