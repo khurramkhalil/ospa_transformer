@@ -1,39 +1,57 @@
-#!/usr/bin/env python3
 """
-Training script for OSPA Transformer on GLUE tasks using the datasets library.
+Updated training script for OSPA Transformer on GLUE tasks using the datasets library.
 
-This script provides a complete training pipeline for OSPA on text classification.
+This script replaces the deprecated GlueDataset with direct dataset loading.
 """
 
 import os
 import argparse
 import time
 import math
-import json
 import numpy as np
 from tqdm import tqdm
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import CosineAnnealingLR
 
 from transformers import AutoTokenizer, AutoConfig
-from datasets import load_dataset
+from datasets import load_dataset, load_from_disk
 import evaluate
 
 # Import project modules
 from src.models.transformer import OSPATransformer
-from src.utils.logging import setup_logger
+import src.utils.logging as logging
 
 
 class SequenceClassifier(nn.Module):
-    """Sequence classifier using OSPA Transformer."""
+    """
+    Sequence classifier using OSPA Transformer.
+    
+    This model uses an encoder-only OSPA Transformer for sequence classification.
+    """
     
     def __init__(self, vocab_size, num_classes, d_model=512, nhead=8, num_layers=6,
                  dim_feedforward=2048, dropout=0.1, enforce_mode='regularize',
                  ortho_penalty_weight=0.01, max_seq_length=512, pad_idx=0):
+        """
+        Initialize sequence classifier.
+        
+        Args:
+            vocab_size: Size of vocabulary
+            num_classes: Number of output classes
+            d_model: Model dimension
+            nhead: Number of attention heads
+            num_layers: Number of encoder layers
+            dim_feedforward: Dimension of feedforward network
+            dropout: Dropout probability
+            enforce_mode: How to enforce orthogonality
+            ortho_penalty_weight: Weight for orthogonality penalty
+            max_seq_length: Maximum sequence length
+            pad_idx: Padding token index
+        """
         super(SequenceClassifier, self).__init__()
         
         # Embedding layer
@@ -61,6 +79,17 @@ class SequenceClassifier(nn.Module):
         self.pad_idx = pad_idx
     
     def forward(self, input_ids, attention_mask=None):
+        """
+        Forward pass for sequence classification.
+        
+        Args:
+            input_ids: Input token indices
+            attention_mask: Attention mask (1 for tokens, 0 for padding)
+            
+        Returns:
+            logits: Classification logits
+            ortho_penalty: Orthogonality penalty
+        """
         # Create padding mask for transformer
         if attention_mask is None:
             src_key_padding_mask = (input_ids == self.pad_idx)
@@ -88,7 +117,21 @@ class SequenceClassifier(nn.Module):
 
 
 def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None):
-    """Train for one epoch."""
+    """
+    Train for one epoch.
+    
+    Args:
+        model: Model to train
+        dataloader: DataLoader for training data
+        optimizer: Optimizer
+        criterion: Loss function
+        device: Device for computation
+        scheduler: Learning rate scheduler
+        
+    Returns:
+        avg_loss: Average loss for the epoch
+        avg_acc: Average accuracy for the epoch
+    """
     model.train()
     total_loss = 0
     correct = 0
@@ -96,10 +139,15 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
     
     pbar = tqdm(dataloader, desc="Training")
     for batch in pbar:
+        # Check if batch is a dictionary or list
+        if isinstance(batch, list):
+            # Convert list to appropriate format if needed
+            batch = {k: torch.stack([item[k] for item in batch]) for k in batch[0].keys()}
+        
         # Move batch to device
-        input_ids = batch[0].to(device)
-        attention_mask = batch[1].to(device)
-        labels = batch[2].to(device)
+        input_ids = batch['input_ids'].to(device)
+        attention_mask = batch['attention_mask'].to(device)
+        labels = batch['labels'].to(device)
         
         # Zero gradients
         optimizer.zero_grad()
@@ -149,7 +197,20 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
 
 
 def evaluate(model, dataloader, criterion, device, metric_name=None):
-    """Evaluate the model."""
+    """
+    Evaluate the model.
+    
+    Args:
+        model: Model to evaluate
+        dataloader: DataLoader for evaluation data
+        criterion: Loss function
+        device: Device for computation
+        metric_name: Name of the metric to compute
+        
+    Returns:
+        avg_loss: Average loss
+        metrics: Dictionary of metrics
+    """
     model.eval()
     total_loss = 0
     correct = 0
@@ -160,10 +221,15 @@ def evaluate(model, dataloader, criterion, device, metric_name=None):
     
     with torch.no_grad():
         for batch in tqdm(dataloader, desc="Evaluating"):
+            # Check if batch is a dictionary or list
+            if isinstance(batch, list):
+                # Convert list to appropriate format if needed
+                batch = {k: torch.stack([item[k] for item in batch]) for k in batch[0].keys()}
+                        
             # Move batch to device
-            input_ids = batch[0].to(device)
-            attention_mask = batch[1].to(device)
-            labels = batch[2].to(device)
+            input_ids = batch['input_ids'].to(device)
+            attention_mask = batch['attention_mask'].to(device)
+            labels = batch['labels'].to(device)
             
             # Forward pass
             logits, ortho_penalty = model(input_ids, attention_mask)
@@ -208,11 +274,23 @@ def evaluate(model, dataloader, criterion, device, metric_name=None):
     return avg_loss, metrics
 
 
+def tokenize_function(examples, tokenizer, max_length):
+    """Tokenize examples for GLUE tasks."""
+    # Handle different GLUE task formats
+    if 'sentence' in examples:
+        # Single sentence tasks (e.g., SST-2)
+        return tokenizer(examples['sentence'], padding='max_length', truncation=True, max_length=max_length)
+    elif 'sentence1' in examples and 'sentence2' in examples:
+        # Sentence pair tasks (e.g., MNLI, QQP)
+        return tokenizer(examples['sentence1'], examples['sentence2'], padding='max_length', truncation=True, max_length=max_length)
+    else:
+        raise ValueError("Unsupported dataset format")
+
+
 def main(args):
     """Main training function."""
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print(f"Using device: {device}")
     
     # Set random seed for reproducibility
     torch.manual_seed(args.seed)
@@ -221,111 +299,66 @@ def main(args):
     
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
-    if tokenizer.pad_token is None and tokenizer.eos_token is not None:
-        tokenizer.pad_token = tokenizer.eos_token
     
     # Get task info
-    task_to_keys = {
-        'sst2': ('sentence', None),
-        'mnli': ('premise', 'hypothesis'),
-        'qqp': ('question1', 'question2'),
+    task_to_info = {
+        'sst2': {'num_labels': 2, 'metric': 'accuracy'},
+        'mnli': {'num_labels': 3, 'metric': 'accuracy'},
+        'qqp': {'num_labels': 2, 'metric': 'f1'}
     }
     
-    if args.task not in task_to_keys:
+    if args.task not in task_to_info:
         raise ValueError(f"Task {args.task} not supported")
     
-    sentence1_key, sentence2_key = task_to_keys[args.task]
-    
-    # Determine number of labels
-    task_to_labels = {
-        'sst2': 2,
-        'mnli': 3,
-        'qqp': 2
-    }
-    num_labels = task_to_labels[args.task]
-    
-    # Create experiment directory
-    experiment_dir = os.path.join(
-        args.output_dir,
-        f"{args.task}_{args.enforce_mode}_{time.strftime('%Y%m%d-%H%M%S')}"
-    )
-    os.makedirs(experiment_dir, exist_ok=True)
-    
-    # Initialize logger
-    logger = setup_logger(experiment_dir)
-    logger.info(f"Arguments: {args}")
+    num_labels = task_to_info[args.task]['num_labels']
+    metric_name = task_to_info[args.task]['metric']
     
     # Load dataset
-    logger.info(f"Loading {args.task} dataset...")
-    raw_datasets = load_dataset("glue", args.task)
-    
-    # Define preprocessing function
-    def preprocess_function(examples):
-        # Extract inputs
-        texts = (
-            (examples[sentence1_key],) if sentence2_key is None else
-            (examples[sentence1_key], examples[sentence2_key])
-        )
-        
-        # Tokenize
-        result = tokenizer(*texts, padding="max_length", max_length=args.max_seq_length, truncation=True)
-        
-        # Add labels
-        if "label" in examples:
-            result["labels"] = examples["label"]
-        
-        return result
-    
-    # Preprocess datasets
-    logger.info("Preprocessing datasets...")
-    processed_datasets = raw_datasets.map(
-        preprocess_function,
-        batched=True,
-        remove_columns=raw_datasets["train"].column_names,
-        desc="Preprocessing datasets",
-    )
-    
-    # Get train/validation splits
-    train_dataset = processed_datasets["train"]
-    if args.task == "mnli":
-        validation_dataset = processed_datasets["validation_matched"]
+    if os.path.exists(os.path.join(args.data_dir, args.task)):
+        # Load from disk if available
+        dataset = load_from_disk(os.path.join(args.data_dir, args.task))
     else:
-        validation_dataset = processed_datasets["validation"]
+        # Download from Hub
+        dataset = load_dataset('glue', args.task)
+        # Save to disk for future use
+        dataset.save_to_disk(os.path.join(args.data_dir, args.task))
     
-    # Convert to PyTorch tensors
-    logger.info("Preparing data loaders...")
+    # Preprocess dataset
+    tokenized_datasets = dataset.map(
+        lambda examples: tokenize_function(examples, tokenizer, args.max_seq_length),
+        batched=True
+    )
+
+    # Convert to PyTorch tensors format
+    tokenized_datasets = tokenized_datasets.with_format("torch")
+    # Prepare data splits
+    train_dataset = tokenized_datasets['train']
+    if 'validation' in tokenized_datasets:
+        eval_dataset = tokenized_datasets['validation']
+    elif 'validation_matched' in tokenized_datasets:  # For MNLI
+        eval_dataset = tokenized_datasets['validation_matched']
+    else:
+        # Split training data if no validation set is available
+        train_eval_split = train_dataset.train_test_split(test_size=0.1)
+        train_dataset = train_eval_split['train']
+        eval_dataset = train_eval_split['test']
     
-    # Training data
-    train_input_ids = torch.tensor(train_dataset["input_ids"], dtype=torch.long)
-    train_attention_mask = torch.tensor(train_dataset["attention_mask"], dtype=torch.long)
-    train_labels = torch.tensor(train_dataset["labels"], dtype=torch.long)
-    train_tensor_dataset = TensorDataset(train_input_ids, train_attention_mask, train_labels)
-    
-    # Validation data
-    val_input_ids = torch.tensor(validation_dataset["input_ids"], dtype=torch.long)
-    val_attention_mask = torch.tensor(validation_dataset["attention_mask"], dtype=torch.long)
-    val_labels = torch.tensor(validation_dataset["labels"], dtype=torch.long)
-    val_tensor_dataset = TensorDataset(val_input_ids, val_attention_mask, val_labels)
-    
-    # Create data loaders
+    # Create dataloaders
     train_loader = DataLoader(
-        train_tensor_dataset,
+        train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=True
+        num_workers=args.num_workers
     )
     
     eval_loader = DataLoader(
-        val_tensor_dataset,
+        eval_dataset,
         batch_size=args.batch_size,
         shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=True
+        num_workers=args.num_workers
     )
     
     # Create model
-    logger.info("Creating OSPA Transformer model...")
     model = SequenceClassifier(
         vocab_size=len(tokenizer),
         num_classes=num_labels,
@@ -341,13 +374,9 @@ def main(args):
     )
     model.to(device)
     
-    # Log model size
-    num_params = sum(p.numel() for p in model.parameters())
-    logger.info(f"Model has {num_params:,} parameters")
-    
     # Multi-GPU support
     if torch.cuda.device_count() > 1:
-        logger.info(f"Using {torch.cuda.device_count()} GPUs")
+        print(f"Using {torch.cuda.device_count()} GPUs")
         model = nn.DataParallel(model)
     
     # Define loss function
@@ -361,19 +390,30 @@ def main(args):
     )
     
     # Define scheduler
-    total_steps = len(train_loader) * args.epochs
     scheduler = CosineAnnealingLR(
         optimizer,
-        T_max=total_steps,
+        T_max=args.epochs * len(train_loader),
         eta_min=args.learning_rate / 100
     )
     
+    # Create experiment directory
+    experiment_dir = os.path.join(
+        args.output_dir,
+        f"{args.task}_{args.enforce_mode}_{time.strftime('%Y%m%d-%H%M%S')}"
+    )
+    os.makedirs(experiment_dir, exist_ok=True)
+    
+    # Initialize logger
+    logger = logging.setup_logger(experiment_dir)
+    logger.info(f"Arguments: {args}")
+    logger.info(f"Model: {model}")
+    
     # Save configuration for reproducibility
     with open(os.path.join(experiment_dir, 'config.json'), 'w') as f:
+        import json
         json.dump(vars(args), f, indent=2)
     
     # Train and evaluate
-    logger.info("Starting training...")
     best_eval_metric = 0.0
     all_metrics = []
     
@@ -412,7 +452,7 @@ def main(args):
             json.dump(all_metrics, f, indent=2)
         
         # Save best model
-        current_metric = eval_metrics.get('accuracy', 0.0)
+        current_metric = eval_metrics.get(metric_name, 0.0)
         if current_metric > best_eval_metric:
             best_eval_metric = current_metric
             # Save model
@@ -421,9 +461,9 @@ def main(args):
                 torch.save(model.module.state_dict(), model_path)
             else:
                 torch.save(model.state_dict(), model_path)
-            logger.info(f"New best model saved with accuracy = {current_metric:.4f}")
+            logger.info(f"New best model saved with {metric_name} = {current_metric:.4f}")
     
-    logger.info(f"Training completed. Best accuracy: {best_eval_metric:.4f}")
+    logger.info(f"Training completed. Best {metric_name}: {best_eval_metric:.4f}")
 
 
 if __name__ == "__main__":
@@ -469,7 +509,7 @@ if __name__ == "__main__":
                         help="Number of training epochs")
     parser.add_argument("--seed", type=int, default=42,
                         help="Random seed")
-    parser.add_argument("--num_workers", type=int, default=0,
+    parser.add_argument("--num_workers", type=int, default=4,
                         help="Number of workers for data loading")
     
     args = parser.parse_args()
