@@ -83,9 +83,14 @@ class OrthogonalLinear(nn.Module):
     def forward(self, x):
         """Forward pass with optional orthogonalization."""
         if self.enforce_mode == 'strict':
-            # Orthogonalize weights before each forward pass
-            with torch.no_grad():
-                self.weight.copy_(orthogonalize(self.weight.clone()))
+            # Only orthogonalize occasionally
+            if not hasattr(self, 'ortho_step'):
+                self.ortho_step = 0
+            self.ortho_step += 1
+            
+            if self.ortho_step % 10 == 0:  # Every 10 steps
+                with torch.no_grad():
+                    self.weight.copy_(orthogonalize(self.weight.clone()))
         
         return F.linear(x, self.weight, self.bias)
     

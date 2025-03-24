@@ -83,6 +83,57 @@ class SequenceClassifier(torch.nn.Module):
         return logits, ortho_penalty
 
 
+def load_experiment_results(experiment_dir):
+    """
+    Load results from all experiment runs, accounting for nested directory structure.
+    
+    Args:
+        experiment_dir: Base directory containing experiment results
+        
+    Returns:
+        Dictionary of experiment results
+    """
+    results = {}
+    
+    # Find all subdirectories (baseline, ospa_regularize_X, etc.)
+    subdirs = [d for d in glob.glob(os.path.join(experiment_dir, "*")) if os.path.isdir(d)]
+    
+    print(f"Found {len(subdirs)} experiment type directories")
+    
+    for subdir in subdirs:
+        subdir_name = os.path.basename(subdir)
+        
+        # Skip the visualizations directory
+        if subdir_name == "visualizations":
+            continue
+            
+        # Find timestamp directories within each experiment type
+        timestamp_dirs = [d for d in glob.glob(os.path.join(subdir, "*")) if os.path.isdir(d)]
+        
+        # Take the most recent timestamp directory if multiple exist
+        if timestamp_dirs:
+            # Sort by timestamp (assuming names end with timestamp)
+            timestamp_dirs.sort(reverse=True)
+            latest_dir = timestamp_dirs[0]
+            metrics_file = os.path.join(latest_dir, "metrics.json")
+            
+            if os.path.exists(metrics_file):
+                print(f"Found metrics in {latest_dir}")
+                try:
+                    with open(metrics_file, 'r') as f:
+                        metrics = json.load(f)
+                        
+                    # Store results with path
+                    results[subdir_name] = {
+                        'metrics': metrics,
+                        'path': latest_dir
+                    }
+                except Exception as e:
+                    print(f"Error loading metrics from {metrics_file}: {e}")
+    
+    return results
+
+
 def load_model(model_path, config_path=None, device=None):
     """
     Load a model from checkpoint.
@@ -103,19 +154,17 @@ def load_model(model_path, config_path=None, device=None):
         config_path = os.path.join(os.path.dirname(model_path), 'config.json')
     
     if os.path.exists(config_path):
-        with open(config_path, 'r') as f:
-            config = json.load(f)
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+        except Exception as e:
+            print(f"Error loading config from {config_path}: {e}")
+            config = {}
     else:
         print(f"Warning: Config not found at {config_path}, using defaults")
-        config = {
-            'd_model': 512,
-            'nhead': 8,
-            'num_layers': 6,
-            'enforce_mode': 'init',
-            'ortho_penalty_weight': 0.0
-        }
+        config = {}
     
-    # Create model
+    # Create model with defaults if config values are missing
     model = SequenceClassifier(
         vocab_size=30522,  # Default BERT vocab size
         num_classes=2,     # Default for SST-2
@@ -127,31 +176,31 @@ def load_model(model_path, config_path=None, device=None):
     )
     
     # Load weights
-    state_dict = torch.load(model_path, map_location=device)
-    model.load_state_dict(state_dict)
-    model.to(device)
-    model.eval()
-    
-    return model
+    try:
+        state_dict = torch.load(model_path, map_location=device)
+        model.load_state_dict(state_dict)
+        model.to(device)
+        model.eval()
+        return model
+    except Exception as e:
+        print(f"Error loading model from {model_path}: {e}")
+        return None
 
 
-def find_best_models(experiment_dir):
+def find_best_models(experiment_results):
     """
-    Find the best models for each experiment.
+    Find the best models from experiment results.
     
     Args:
-        experiment_dir: Base directory containing experiment subdirectories
+        experiment_results: Dictionary from load_experiment_results
         
     Returns:
         Dictionary mapping experiment names to best model paths
     """
     best_models = {}
     
-    for exp_path in glob.glob(os.path.join(experiment_dir, "*")):
-        if not os.path.isdir(exp_path):
-            continue
-            
-        exp_name = os.path.basename(exp_path)
+    for exp_name, exp_data in experiment_results.items():
+        exp_path = exp_data['path']
         model_path = os.path.join(exp_path, "best_model.pt")
         
         if os.path.exists(model_path):
@@ -167,11 +216,13 @@ def main(args):
     
     # Load all experiment results
     print(f"Loading experiment results from {args.experiment_dir}...")
-    results = viz.load_experiment_results(args.experiment_dir)
+    results = load_experiment_results(args.experiment_dir)
     
     if not results:
         print(f"Warning: No results found in {args.experiment_dir}")
         return
+    
+    print(f"Found {len(results)} experiment results")
     
     # Create training curves
     print("Generating training curves...")
@@ -197,10 +248,10 @@ def main(args):
     
     # Find best models
     print("Finding best models...")
-    best_models = find_best_models(args.experiment_dir)
+    best_models = find_best_models(results)
     
     if not best_models:
-        print(f"Warning: No model checkpoints found in {args.experiment_dir}")
+        print(f"Warning: No model checkpoints found in experiment results")
         # Still create the report with available data
         print("Generating visualization report...")
         viz.create_visualization_report(
@@ -210,63 +261,42 @@ def main(args):
         print(f"Basic visualizations complete! Results saved to {args.output_dir}")
         return
     
+    print(f"Found {len(best_models)} model checkpoints")
+    
     # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(args.tokenizer)
     if tokenizer.pad_token is None and tokenizer.eos_token is not None:
         tokenizer.pad_token = tokenizer.eos_token
     
     # Find baseline and OSPA models
-    baseline_model_path = None
-    ospa_model_path = None
+    baseline_model_path = best_models.get('baseline')
+    ospa_model_path = best_models.get('ospa_regularize_0.01')
     
-    for exp_name, model_path in best_models.items():
-        if "baseline" in exp_name:
-            baseline_model_path = model_path
-        elif "ospa_regularize_0.01" in exp_name:
-            ospa_model_path = model_path
-        # If the specific one isn't found, use any regularize variant
-        elif "ospa_regularize" in exp_name and ospa_model_path is None:
-            ospa_model_path = model_path
+    # If specific ones not found, try alternatives
+    if not ospa_model_path:
+        for name, path in best_models.items():
+            if 'ospa_regularize' in name:
+                ospa_model_path = path
+                break
     
     # If specific models are found, analyze attention patterns
     if baseline_model_path and ospa_model_path:
         print(f"Loading baseline model from {baseline_model_path}...")
-        try:
-            baseline_model = load_model(baseline_model_path)
-            
-            print(f"Loading OSPA model from {ospa_model_path}...")
-            ospa_model = load_model(ospa_model_path)
-            
-            # Adapt example sentences based on the dataset
-            if args.dataset.lower() == "sst-2":
-                example_sentences = [
-                    "This movie was absolutely fantastic!",
-                    "I found the film boring and predictable.",
-                    "The performances were good but the script was weak.",
-                    "A masterpiece that redefines the genre."
-                ]
-            elif args.dataset.lower() == "mnli":
-                example_sentences = [
-                    "The man is walking his dog in the park. The man is outside with his pet.",
-                    "The train arrived on time. The bus was delayed by an hour.",
-                    "The book was written by a famous author. The novel was penned by a well-known writer.",
-                    "The company announced record profits. The business is struggling financially."
-                ]
-            elif args.dataset.lower() == "qqp":
-                example_sentences = [
-                    "How do I improve my English speaking skills? What's the best way to become fluent in English?",
-                    "What causes earthquakes? Why does the ground shake during an earthquake?",
-                    "How do I lose weight fast? What is the fastest way to burn fat?",
-                    "What's the meaning of life? Why are we here on Earth?"
-                ]
-            else:
-                # Generic examples
-                example_sentences = [
-                    "This is an example of a positive sentiment.",
-                    "This is an example of a negative sentiment.",
-                    "This is a neutral statement about the topic.",
-                    "This example contains mixed sentiments about the subject."
-                ]
+        baseline_model = load_model(baseline_model_path)
+        
+        print(f"Loading OSPA model from {ospa_model_path}...")
+        ospa_model = load_model(ospa_model_path)
+        
+        if not baseline_model or not ospa_model:
+            print("Error loading models. Skipping attention analysis.")
+        else:
+            # Analyze example sentences
+            example_sentences = [
+                "This movie was absolutely fantastic!",
+                "I found the film boring and predictable.",
+                "The performances were good but the script was weak.",
+                "A masterpiece that redefines the genre."
+            ]
             
             print("Visualizing attention patterns for example sentences...")
             attention_dir = os.path.join(args.output_dir, "attention_patterns")
@@ -303,16 +333,8 @@ def main(args):
             similarity_dir = os.path.join(args.output_dir, "head_similarity")
             os.makedirs(similarity_dir, exist_ok=True)
             
-            # Use a typical example based on dataset
-            if args.dataset.lower() == "sst-2":
-                sample_text = "An engaging and thought-provoking film that challenges conventions."
-            elif args.dataset.lower() == "mnli":
-                sample_text = "The researchers discovered a new species. The scientists found an unknown animal."
-            elif args.dataset.lower() == "qqp":
-                sample_text = "How do I improve my memory? What are some techniques for better retention of information?"
-            else:
-                sample_text = "This is a sample text to analyze the attention patterns of the model."
-            
+            # Use a typical SST-2 example
+            sample_text = "An engaging and thought-provoking film that challenges conventions."
             encoded = tokenizer.encode_plus(
                 sample_text, 
                 return_tensors='pt',
@@ -378,8 +400,6 @@ def main(args):
                 )
             except Exception as e:
                 print(f"Error during attention analysis: {e}")
-        except Exception as e:
-            print(f"Error loading models: {e}")
     else:
         print("Warning: Could not find both baseline and OSPA models for comparison")
     

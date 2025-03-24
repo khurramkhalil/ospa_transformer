@@ -46,18 +46,18 @@ for penalty in 0.001 0.01 0.1; do
         --num_workers 0
 done
 
-# Run OSPA with strict orthogonalization
-echo "Running OSPA with strict orthogonalization..."
-python src/scripts/fixed_train_glue.py \
-    --task sst2 \
-    --data_dir ./data \
-    --output_dir $OUTPUT_DIR/ospa_strict \
-    --d_model 512 \
-    --nhead 8 \
-    --num_layers 6 \
-    --enforce_mode strict \
-    --batch_size 32 \
-    --learning_rate 5e-5 \
-    --epochs 3 \
-    --seed 42 \
-    --num_workers 0
+# # Run OSPA with strict orthogonalization
+# echo "Running OSPA with strict orthogonalization..."
+# python src/scripts/fixed_train_glue.py \
+#     --task sst2 \
+#     --data_dir ./data \
+#     --output_dir $OUTPUT_DIR/ospa_strict \
+#     --d_model 512 \
+#     --nhead 8 \
+#     --num_layers 6 \
+#     --enforce_mode strict \
+#     --batch_size 32 \
+#     --learning_rate 5e-5 \
+#     --epochs 3 \
+#     --seed 42 \
+#     --num_workers 0
