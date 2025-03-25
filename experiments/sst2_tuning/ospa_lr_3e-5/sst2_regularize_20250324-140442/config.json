@@ -1,0 +1,20 @@
+{
+  "task": "sst2",
+  "data_dir": "./data",
+  "output_dir": "experiments/sst2_tuning/ospa_lr_3e-5",
+  "tokenizer": "bert-base-uncased",
+  "max_seq_length": 128,
+  "d_model": 512,
+  "nhead": 8,
+  "num_layers": 6,
+  "dim_feedforward": 2048,
+  "dropout": 0.1,
+  "enforce_mode": "regularize",
+  "ortho_penalty_weight": 0.005,
+  "batch_size": 32,
+  "learning_rate": 3e-05,
+  "weight_decay": 0.02,
+  "epochs": 5,
+  "seed": 42,
+  "num_workers": 0
+}

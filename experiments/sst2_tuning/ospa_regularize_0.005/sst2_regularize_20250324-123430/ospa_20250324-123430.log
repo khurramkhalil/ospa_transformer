@@ -1,0 +1,29 @@
+2025-03-24 12:34:30 - ospa - INFO - Logging to experiments/sst2_tuning/ospa_regularize_0.005/sst2_regularize_20250324-123430/ospa_20250324-123430.log
+2025-03-24 12:34:30 - ospa - INFO - Arguments: Namespace(task='sst2', data_dir='./data', output_dir='experiments/sst2_tuning/ospa_regularize_0.005', tokenizer='bert-base-uncased', max_seq_length=128, d_model=512, nhead=8, num_layers=6, dim_feedforward=2048, dropout=0.1, enforce_mode='regularize', ortho_penalty_weight=0.005, batch_size=32, learning_rate=5e-05, weight_decay=0.02, epochs=5, seed=42, num_workers=0)
+2025-03-24 12:34:30 - ospa - INFO - Loading sst2 dataset...
+2025-03-24 12:34:34 - ospa - INFO - Preprocessing datasets...
+2025-03-24 12:34:38 - ospa - INFO - Preparing data loaders...
+2025-03-24 12:34:44 - ospa - INFO - Creating OSPA Transformer model...
+2025-03-24 12:34:44 - ospa - INFO - Model has 34,543,618 parameters
+2025-03-24 12:34:44 - ospa - INFO - Starting training...
+2025-03-24 12:34:44 - ospa - INFO - Epoch 1/5
+2025-03-24 12:36:17 - ospa - INFO - Train Loss: 0.6413, Train Acc: 0.6659
+2025-03-24 12:36:18 - ospa - INFO - Eval Loss: 0.6019, Accuracy: 0.6961
+2025-03-24 12:36:18 - ospa - INFO - New best model saved with accuracy = 0.6961
+2025-03-24 12:36:18 - ospa - INFO - Epoch 2/5
+2025-03-24 12:37:52 - ospa - INFO - Train Loss: 0.5633, Train Acc: 0.7410
+2025-03-24 12:37:52 - ospa - INFO - Eval Loss: 0.6641, Accuracy: 0.7064
+2025-03-24 12:37:52 - ospa - INFO - New best model saved with accuracy = 0.7064
+2025-03-24 12:37:52 - ospa - INFO - Epoch 3/5
+2025-03-24 12:39:26 - ospa - INFO - Train Loss: 0.4993, Train Acc: 0.7868
+2025-03-24 12:39:26 - ospa - INFO - Eval Loss: 0.6366, Accuracy: 0.7259
+2025-03-24 12:39:27 - ospa - INFO - New best model saved with accuracy = 0.7259
+2025-03-24 12:39:27 - ospa - INFO - Epoch 4/5
+2025-03-24 12:41:00 - ospa - INFO - Train Loss: 0.4323, Train Acc: 0.8245
+2025-03-24 12:41:00 - ospa - INFO - Eval Loss: 0.5998, Accuracy: 0.7569
+2025-03-24 12:41:01 - ospa - INFO - New best model saved with accuracy = 0.7569
+2025-03-24 12:41:01 - ospa - INFO - Epoch 5/5
+2025-03-24 12:42:34 - ospa - INFO - Train Loss: 0.3893, Train Acc: 0.8461
+2025-03-24 12:42:35 - ospa - INFO - Eval Loss: 0.6077, Accuracy: 0.7592
+2025-03-24 12:42:35 - ospa - INFO - New best model saved with accuracy = 0.7592
+2025-03-24 12:42:35 - ospa - INFO - Training completed. Best accuracy: 0.7592
