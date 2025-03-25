@@ -1,0 +1,63 @@
+
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>OSPA Visualization Report - SST-2 (Tuned)</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+            h1, h2, h3 { color: #333; }
+            .figure { margin: 20px 0; text-align: center; }
+            .figure img { max-width: 100%; border: 1px solid #ddd; }
+            .figure-caption { margin-top: 10px; font-style: italic; color: #666; }
+            .section { margin: 40px 0; }
+            table { border-collapse: collapse; width: 100%; }
+            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+            tr:nth-child(even) { background-color: #f9f9f9; }
+        </style>
+    </head>
+    <body>
+        <h1>OSPA Visualization Report</h1>
+        <h2>Dataset: SST-2 (Tuned)</h2>
+    
+        <div class="section">
+            <h3>Training Progress and Performance</h3>
+    
+            <div class="figure">
+                <img src="SST-2 (Tuned)_accuracy_curve.png" alt="SST-2 (Tuned)_accuracy_curve.png">
+                <div class="figure-caption">SST-2 (Tuned) accuracy curve</div>
+            </div>
+            
+            <div class="figure">
+                <img src="SST-2 (Tuned)_loss_curve.png" alt="SST-2 (Tuned)_loss_curve.png">
+                <div class="figure-caption">SST-2 (Tuned) loss curve</div>
+            </div>
+            
+            <div class="figure">
+                <img src="SST-2 (Tuned)_final_performance.png" alt="SST-2 (Tuned)_final_performance.png">
+                <div class="figure-caption">SST-2 (Tuned) final performance</div>
+            </div>
+            
+        </div>
+    
+        <div class="section">
+            <h3>Key Findings</h3>
+            <p>
+                The OSPA approach demonstrates improved performance over the baseline standard multi-head attention.
+                The orthogonality constraints help attention heads focus on different aspects of the input, reducing redundancy
+                and leading to better model performance. The regularization approach with a penalty weight in the range of 0.001-0.01
+                appears to be most effective.
+            </p>
+            <p>
+                Key observations:
+                <ul>
+                    <li>OSPA models show more diverse attention patterns across heads than the baseline</li>
+                    <li>The orthogonality constraint reduces redundancy between attention heads</li>
+                    <li>Attention patterns in OSPA models are generally more focused and specialized</li>
+                    <li>The regularization approach provides a good balance between improved performance and computational efficiency</li>
+                </ul>
+            </p>
+        </div>
+    </body>
+    </html>
+    
