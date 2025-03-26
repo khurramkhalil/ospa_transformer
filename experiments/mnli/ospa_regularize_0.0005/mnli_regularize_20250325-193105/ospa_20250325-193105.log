@@ -1,0 +1,20 @@
+2025-03-25 19:31:05 - ospa - INFO - Logging to experiments/mnli/ospa_regularize_0.0005/mnli_regularize_20250325-193105/ospa_20250325-193105.log
+2025-03-25 19:31:05 - ospa - INFO - Arguments: Namespace(task='mnli', data_dir='./data', output_dir='experiments/mnli/ospa_regularize_0.0005', tokenizer='bert-base-uncased', max_seq_length=128, d_model=512, nhead=8, num_layers=6, dim_feedforward=2048, dropout=0.1, enforce_mode='regularize', ortho_penalty_weight=0.0005, batch_size=32, learning_rate=3e-05, weight_decay=0.01, epochs=3, seed=42, num_workers=0)
+2025-03-25 19:31:05 - ospa - INFO - Loading mnli dataset...
+2025-03-25 19:31:08 - ospa - INFO - Preprocessing datasets...
+2025-03-25 19:31:35 - ospa - INFO - Preparing data loaders...
+2025-03-25 19:32:12 - ospa - INFO - Creating OSPA Transformer model...
+2025-03-25 19:32:12 - ospa - INFO - Model has 34,544,131 parameters
+2025-03-25 19:32:12 - ospa - INFO - Starting training...
+2025-03-25 19:32:12 - ospa - INFO - Epoch 1/3
+2025-03-25 19:41:19 - ospa - INFO - Train Loss: 1.0577, Train Acc: 0.4410
+2025-03-25 19:41:23 - ospa - INFO - Eval Loss: 1.0469, Accuracy: 0.4702
+2025-03-25 19:41:24 - ospa - INFO - New best model saved with accuracy = 0.4702
+2025-03-25 19:41:24 - ospa - INFO - Epoch 2/3
+2025-03-25 19:50:30 - ospa - INFO - Train Loss: 1.0271, Train Acc: 0.4767
+2025-03-25 19:50:35 - ospa - INFO - Eval Loss: 1.0210, Accuracy: 0.4832
+2025-03-25 19:50:35 - ospa - INFO - New best model saved with accuracy = 0.4832
+2025-03-25 19:50:35 - ospa - INFO - Epoch 3/3
+2025-03-25 19:59:42 - ospa - INFO - Train Loss: 1.0100, Train Acc: 0.4927
+2025-03-25 19:59:46 - ospa - INFO - Eval Loss: 1.0237, Accuracy: 0.4776
+2025-03-25 19:59:46 - ospa - INFO - Training completed. Best accuracy: 0.4832

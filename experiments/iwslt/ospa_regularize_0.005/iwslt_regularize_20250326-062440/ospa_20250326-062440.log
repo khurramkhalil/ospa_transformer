@@ -1,0 +1,26 @@
+2025-03-26 06:24:40 - ospa - INFO - Logging to experiments/iwslt/ospa_regularize_0.005/iwslt_regularize_20250326-062440/ospa_20250326-062440.log
+2025-03-26 06:24:40 - ospa - INFO - Arguments: Namespace(data_dir='./data/iwslt', output_dir='experiments/iwslt/ospa_regularize_0.005', model_name='Helsinki-NLP/opus-mt-de-en', max_seq_length=128, d_model=512, nhead=8, num_encoder_layers=6, num_decoder_layers=6, dim_feedforward=2048, dropout=0.1, enforce_mode='regularize', ortho_penalty_weight=0.005, batch_size=16, learning_rate=5e-05, weight_decay=0.01, epochs=5, seed=42, num_workers=0)
+2025-03-26 06:24:40 - ospa - INFO - Creating OSPA Transformer model...
+2025-03-26 06:24:42 - ospa - INFO - Model has 133,441,781 parameters
+2025-03-26 06:24:42 - ospa - INFO - Starting training...
+2025-03-26 06:24:42 - ospa - INFO - Epoch 1/5
+2025-03-26 06:45:59 - ospa - INFO - Train Loss: 4.4635
+2025-03-26 06:46:02 - ospa - INFO - Validation Loss: 3.8023
+2025-03-26 06:46:03 - ospa - INFO - New best model saved with validation loss = 3.8023
+2025-03-26 06:46:03 - ospa - INFO - Epoch 2/5
+2025-03-26 07:07:20 - ospa - INFO - Train Loss: 3.5623
+2025-03-26 07:07:23 - ospa - INFO - Validation Loss: 3.3824
+2025-03-26 07:07:24 - ospa - INFO - New best model saved with validation loss = 3.3824
+2025-03-26 07:07:24 - ospa - INFO - Epoch 3/5
+2025-03-26 07:28:42 - ospa - INFO - Train Loss: 3.2754
+2025-03-26 07:28:44 - ospa - INFO - Validation Loss: 3.2009
+2025-03-26 07:28:45 - ospa - INFO - New best model saved with validation loss = 3.2009
+2025-03-26 07:28:45 - ospa - INFO - Epoch 4/5
+2025-03-26 07:50:02 - ospa - INFO - Train Loss: 3.1290
+2025-03-26 07:50:04 - ospa - INFO - Validation Loss: 3.1182
+2025-03-26 07:50:05 - ospa - INFO - New best model saved with validation loss = 3.1182
+2025-03-26 07:50:05 - ospa - INFO - Epoch 5/5
+2025-03-26 08:11:21 - ospa - INFO - Train Loss: 3.0669
+2025-03-26 08:11:23 - ospa - INFO - Validation Loss: 3.0909
+2025-03-26 08:11:24 - ospa - INFO - New best model saved with validation loss = 3.0909
+2025-03-26 08:11:24 - ospa - INFO - Training completed. Best validation loss: 3.0909
