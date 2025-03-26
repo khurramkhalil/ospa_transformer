@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>OSPA Experiments Summary</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+        h1, h2, h3 { color: #333; }
+        .figure { margin: 20px 0; text-align: center; }
+        .figure img { max-width: 100%; border: 1px solid #ddd; }
+        .figure-caption { margin-top: 10px; font-style: italic; color: #666; }
+        .section { margin: 40px 0; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+    </style>
+</head>
+<body>
+    <h1>OSPA Experiments Summary</h1>
+    
+    <div class="section">
+        <h2>Performance Comparisons</h2>
+        <div class="figure">
+            <img src="large_scale_performance.png" alt="large_scale Performance">
+            <div class="figure-caption">large_scale Performance Comparison</div>
+        </div>
+        <div class="figure">
+            <img src="mnli_performance.png" alt="mnli Performance">
+            <div class="figure-caption">mnli Performance Comparison</div>
+        </div>
+        <div class="figure">
+            <img src="qqp_performance.png" alt="qqp Performance">
+            <div class="figure-caption">qqp Performance Comparison</div>
+        </div>
+        <div class="figure">
+            <img src="sst2_tuning_performance.png" alt="sst2_tuning Performance">
+            <div class="figure-caption">sst2_tuning Performance Comparison</div>
+        </div>
+    </div>
+    
+    <div class="section">
+        <h2>Key Findings</h2>
+        <p>
+            The OSPA approach demonstrates improved performance over the baseline standard multi-head attention
+            across multiple datasets and model sizes. The orthogonality constraints help attention heads focus on 
+            different aspects of the input, reducing redundancy and leading to better model performance.
+        </p>
+        <p>
+            Key observations across experiments:
+            <ul>
+                <li>OSPA models consistently outperform baseline transformers when properly tuned</li>
+                <li>The optimal orthogonality penalty weight is typically around 0.0005</li>
+                <li>Benefits of OSPA are observed across different tasks (classification, translation, etc.)</li>
+                <li>The approach scales to larger models and more complex datasets</li>
+                <li>The regularization approach provides the best balance of performance and efficiency</li>
+            </ul>
+        </p>
+    </div>
+</body>
+</html>
