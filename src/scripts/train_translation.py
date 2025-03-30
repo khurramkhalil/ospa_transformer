@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Updated train translation script with support for larger datasets.
+Train a translation model with OSPA attention.
 
-This script modifies the original train_translation.py to add support for
-different translation datasets like WMT16, in addition to IWSLT.
+This script trains a machine translation model using OSPA transformer
+on the IWSLT dataset.
 """
 
 import os
@@ -207,13 +207,11 @@ def evaluate(model, dataloader, criterion, device):
 class TranslationDataset(torch.utils.data.Dataset):
     """Dataset for machine translation."""
     
-    def __init__(self, dataset, src_tokenizer, tgt_tokenizer, src_lang='de', tgt_lang='en', max_length=128):
+    def __init__(self, dataset, src_tokenizer, tgt_tokenizer, max_length=128):
         self.dataset = dataset
         self.src_tokenizer = src_tokenizer
         self.tgt_tokenizer = tgt_tokenizer
         self.max_length = max_length
-        self.src_lang = src_lang
-        self.tgt_lang = tgt_lang
     
     def __len__(self):
         return len(self.dataset)
@@ -221,15 +219,9 @@ class TranslationDataset(torch.utils.data.Dataset):
     def __getitem__(self, idx):
         item = self.dataset[idx]
         
-        # Handle different dataset formats
-        if 'translation' in item:
-            # IWSLT format
-            source_text = item['translation'][self.src_lang]
-            target_text = item['translation'][self.tgt_lang]
-        else:
-            # WMT format
-            source_text = item[self.src_lang]
-            target_text = item[self.tgt_lang]
+        # Get source and target text
+        source_text = item['translation']['de']
+        target_text = item['translation']['en']
         
         # Tokenize
         source_tokens = self.src_tokenizer.encode(
@@ -273,9 +265,6 @@ def main(args):
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(args.seed)
     
-    # Parse language pair
-    src_lang, tgt_lang = args.language_pair.split('-')
-    
     # Load tokenizers
     print("Loading tokenizers...")
     if args.model_name:
@@ -284,15 +273,13 @@ def main(args):
     else:
         # Simple fallback if custom tokenizers are needed
         from transformers import AutoTokenizer
-        model_name = f"Helsinki-NLP/opus-mt-{src_lang}-{tgt_lang}"
-        print(f"Using model: {model_name}")
-        src_tokenizer = AutoTokenizer.from_pretrained(model_name)
+        src_tokenizer = AutoTokenizer.from_pretrained("Helsinki-NLP/opus-mt-de-en")
         tgt_tokenizer = src_tokenizer
     
     # Create experiment directory
     experiment_dir = os.path.join(
         args.output_dir,
-        f"{args.dataset_name}_{args.enforce_mode}_{time.strftime('%Y%m%d-%H%M%S')}"
+        f"iwslt_{args.enforce_mode}_{time.strftime('%Y%m%d-%H%M%S')}"
     )
     os.makedirs(experiment_dir, exist_ok=True)
     
@@ -301,40 +288,25 @@ def main(args):
     logger.info(f"Arguments: {args}")
     
     # Load dataset
-    print(f"Loading {args.dataset_name} dataset...")
+    print("Loading dataset...")
     try:
-        dataset = load_from_disk(os.path.join(args.data_dir, args.language_pair))
-        logger.info(f"Loaded dataset from disk: {args.data_dir}/{args.language_pair}")
+        iwslt_dataset = load_from_disk(os.path.join(args.data_dir, "de-en"))
     except:
-        logger.info(f"Dataset not found locally, loading {args.dataset_name} from HuggingFace")
-        if args.dataset_name == "iwslt2017":
-            dataset = load_dataset("iwslt2017", f"iwslt2017-{args.language_pair}")
-        elif args.dataset_name == "wmt16":
-            dataset = load_dataset("wmt16", args.language_pair)
-        else:
-            raise ValueError(f"Unsupported dataset: {args.dataset_name}")
-        
-        # Save dataset to disk for future use
-        dataset_dir = os.path.join(args.data_dir, args.language_pair)
-        os.makedirs(dataset_dir, exist_ok=True)
-        dataset.save_to_disk(dataset_dir)
+        logger.info("Dataset not found locally, loading from HuggingFace")
+        iwslt_dataset = load_dataset("iwslt2017", "iwslt2017-de-en")
     
     # Create train and validation datasets
     train_dataset = TranslationDataset(
-        dataset['train'],
+        iwslt_dataset['train'],
         src_tokenizer,
         tgt_tokenizer,
-        src_lang=src_lang,
-        tgt_lang=tgt_lang,
         max_length=args.max_seq_length
     )
     
     val_dataset = TranslationDataset(
-        dataset['validation'],
+        iwslt_dataset['validation'],
         src_tokenizer,
         tgt_tokenizer,
-        src_lang=src_lang,
-        tgt_lang=tgt_lang,
         max_length=args.max_seq_length
     )
     
@@ -452,19 +424,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train OSPA Transformer for Translation")
     
     # Data arguments
-    parser.add_argument("--data_dir", type=str, default="./data",
+    parser.add_argument("--data_dir", type=str, default="./data/iwslt",
                         help="Directory containing the datasets")
-    parser.add_argument("--output_dir", type=str, default="./experiments",
+    parser.add_argument("--output_dir", type=str, default="./experiments/iwslt",
                         help="Directory to save the outputs")
-    parser.add_argument("--model_name", type=str, default="",
+    parser.add_argument("--model_name", type=str, default="Helsinki-NLP/opus-mt-de-en",
                         help="Pretrained model name or path")
     parser.add_argument("--max_seq_length", type=int, default=128,
                         help="Maximum sequence length")
-    parser.add_argument("--dataset_name", type=str, default="iwslt2017",
-                        choices=["iwslt2017", "wmt16"],
-                        help="Dataset name (iwslt2017 or wmt16)")
-    parser.add_argument("--language_pair", type=str, default="de-en",
-                        help="Language pair (e.g., de-en)")
     
     # Model arguments
     parser.add_argument("--d_model", type=int, default=512,
