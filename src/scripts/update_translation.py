@@ -119,8 +119,11 @@ class TranslationModel(nn.Module):
         if isinstance(ortho_penalty, float):
             ortho_penalty = torch.tensor(ortho_penalty, device=logits.device)
 
-        return logits, ortho_penalty
+        # Convert scalar penalty to tensor for DataParallel compatibility
+        if isinstance(ortho_penalty, float):
+            ortho_penalty = torch.tensor(ortho_penalty, device=logits.device)
 
+        return logits, ortho_penalty
 
 def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None):
     """Train for one epoch."""
@@ -148,8 +151,16 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
         logits = logits.contiguous().view(-1, logits.size(-1))
         targets = tgt_ids[:, 1:].contiguous().view(-1)
         
+
+        # Handle DataParallel wrapped model
+        if isinstance(model, torch.nn.DataParallel):
+            pad_idx = model.module.pad_idx
+        else:
+            pad_idx = model.pad_idx
+            
         # Compute loss only on non-padded tokens
-        loss_mask = targets != model.pad_idx
+        loss_mask = targets != pad_idx
+
         targets = targets[loss_mask]
         logits = logits[loss_mask]
         
@@ -202,8 +213,15 @@ def evaluate(model, dataloader, criterion, device):
             logits = logits.contiguous().view(-1, logits.size(-1))
             targets = tgt_ids[:, 1:].contiguous().view(-1)
             
+
+            # Handle DataParallel wrapped model
+            if isinstance(model, torch.nn.DataParallel):
+                pad_idx = model.module.pad_idx
+            else:
+                pad_idx = model.pad_idx
+                
             # Compute loss only on non-padded tokens
-            loss_mask = targets != model.pad_idx
+            loss_mask = targets != pad_idx            
             targets = targets[loss_mask]
             logits = logits[loss_mask]
             
