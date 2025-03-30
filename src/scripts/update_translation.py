@@ -114,7 +114,11 @@ class TranslationModel(nn.Module):
         
         # Get orthogonality penalty
         ortho_penalty = self.transformer.get_orthogonality_penalty()
-        
+
+        # Convert scalar penalty to tensor for DataParallel compatibility
+        if isinstance(ortho_penalty, float):
+            ortho_penalty = torch.tensor(ortho_penalty, device=logits.device)
+
         return logits, ortho_penalty
 
 
