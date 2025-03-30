@@ -1,3 +1,15 @@
+"""
+This file has been updated with distributed training support.
+Changes made:
+1. Added torch.distributed imports
+2. Added distributed command-line arguments
+3. Modified device setup to support distributed training
+4. Added DistributedSampler for datasets
+5. Wrapped model with DistributedDataParallel
+6. Updated epoch setting for samplers
+7. Modified model saving for distributed environments
+8. Updated logging to only log from main process
+"""
 #!/usr/bin/env python3
 """
 Updated train translation script with support for larger datasets.
