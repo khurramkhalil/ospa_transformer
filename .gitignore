@@ -34,3 +34,4 @@ saved_models/
 .DS_Store/
 data/
 data/*
+.DS_Store/*
