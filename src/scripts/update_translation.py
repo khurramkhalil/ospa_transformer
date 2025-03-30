@@ -498,6 +498,11 @@ if __name__ == "__main__":
                         help="Random seed")
     parser.add_argument("--num_workers", type=int, default=0,
                         help="Number of workers for data loading")
+    # Add these to the argument parser
+    parser.add_argument("--distributed", action="store_true",
+                        help="Use distributed training")
+    parser.add_argument("--local_rank", type=int, default=-1,
+                        help="Local rank for distributed training")
     
     args = parser.parse_args()
     
