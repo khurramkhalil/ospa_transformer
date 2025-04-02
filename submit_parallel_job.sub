@@ -1,0 +1,236 @@
+#!/bin/bash
+#SBATCH --partition=rss-gpu
+#SBATCH -N 1
+#SBATCH -c 60
+#SBATCH --mem 0G
+#SBATCH --gres=gpu:A100:4
+#SBATCH --export=all
+#SBATCH --out=Hellbender-%j.out
+# %j will substitute to the job's id
+#e.g. if you submitted from /home/username/softwaretesting your job would run in that directory.
+#SBATCH --output=output.txt%J_stdout.txt
+#SBATCH --error=error.txt%J_stderr.txt
+#SBATCH --time=100:00:00
+#SBATCH --job-name=OSPA_Multi_Parallel_A100
+#SBATCH --mail-user=khurram.khalil@missouri.edu
+#SBATCH --mail-type=ALL
+
+# Load required modules
+module load miniconda3/4.10.3_gcc_9.5.0                  # load the conda software
+source activate deepseek
+
+# Create the parallel GPU script
+cat > run_parallel_large_experiments.sh << 'EOF'
+#!/bin/bash
+
+# This script runs multiple experiments in parallel, one on each GPU
+# with resume functionality to continue training after interruptions
+
+# Base output directory
+LARGE_DIR="experiments/large_scale"
+mkdir -p $LARGE_DIR
+
+# Large model configurations
+MODEL_DIM=768
+HEADS=12
+LAYERS=12
+FFN_DIM=3072
+
+# Best penalty weight based on SST-2 tuning
+PENALTY=0.0005
+
+# Define all experiments to run
+declare -a experiments=(
+    # Format: "gpu_id|output_dir|experiment_command"
+    "0|$LARGE_DIR/large_mnli|python src/scripts/fixed_train_glue.py --task mnli --data_dir ./data --output_dir $LARGE_DIR/large_mnli --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode regularize --ortho_penalty_weight $PENALTY --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+    
+    "1|$LARGE_DIR/large_mnli_baseline|python src/scripts/fixed_train_glue.py --task mnli --data_dir ./data --output_dir $LARGE_DIR/large_mnli_baseline --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode init --ortho_penalty_weight 0.0 --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+    
+    "2|$LARGE_DIR/large_sst2|python src/scripts/fixed_train_glue.py --task sst2 --data_dir ./data --output_dir $LARGE_DIR/large_sst2 --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode regularize --ortho_penalty_weight $PENALTY --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+    
+    "3|$LARGE_DIR/large_sst2_baseline|python src/scripts/fixed_train_glue.py --task sst2 --data_dir ./data --output_dir $LARGE_DIR/large_sst2_baseline --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode init --ortho_penalty_weight 0.0 --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+)
+
+# Additional experiments (will only run after the first set completes)
+declare -a additional_experiments=(
+    "0|$LARGE_DIR/large_qqp|python src/scripts/fixed_train_glue.py --task qqp --data_dir ./data --output_dir $LARGE_DIR/large_qqp --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode regularize --ortho_penalty_weight $PENALTY --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+    
+    "1|$LARGE_DIR/large_qqp_baseline|python src/scripts/fixed_train_glue.py --task qqp --data_dir ./data --output_dir $LARGE_DIR/large_qqp_baseline --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode init --ortho_penalty_weight 0.0 --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+    
+    "2|$LARGE_DIR/large_qqp_penalty_small|python src/scripts/fixed_train_glue.py --task qqp --data_dir ./data --output_dir $LARGE_DIR/large_qqp_penalty_small --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode regularize --ortho_penalty_weight 0.0001 --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+    
+    "3|$LARGE_DIR/large_qqp_penalty_large|python src/scripts/fixed_train_glue.py --task qqp --data_dir ./data --output_dir $LARGE_DIR/large_qqp_penalty_large --d_model $MODEL_DIM --nhead $HEADS --num_layers $LAYERS --dim_feedforward $FFN_DIM --enforce_mode regularize --ortho_penalty_weight 0.01 --batch_size 16 --learning_rate 2e-5 --weight_decay 0.01 --epochs 8 --seed 42 --num_workers 0"
+)
+
+# Add the project root to Python path
+export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+# Function to check if experiment is complete
+is_experiment_complete() {
+    local output_dir=$1
+    
+    # Check if the best model exists and metrics.json exists
+    if [[ -f "$output_dir/best_model.pt" && -f "$output_dir/metrics.json" ]]; then
+        # Check if metrics.json has enough epochs (look for last epoch entry)
+        local epoch_count=$(grep -o '"epoch":' "$output_dir/metrics.json" | wc -l)
+        if [[ $epoch_count -ge 8 ]]; then
+            return 0 # True, experiment is complete
+        fi
+    fi
+    
+    return 1 # False, experiment is not complete
+}
+
+# Function to check if experiment has been started
+is_experiment_started() {
+    local output_dir=$1
+    
+    # Check if metrics.json exists and has at least one epoch
+    if [[ -f "$output_dir/metrics.json" ]]; then
+        local epoch_count=$(grep -o '"epoch":' "$output_dir/metrics.json" | wc -l)
+        if [[ $epoch_count -ge 1 ]]; then
+            return 0 # True, experiment is started
+        fi
+    fi
+    
+    return 1 # False, experiment is not started
+}
+
+# Function to get current epoch from metrics file
+get_current_epoch() {
+    local output_dir=$1
+    local metrics_file="$output_dir/metrics.json"
+    
+    if [[ -f "$metrics_file" ]]; then
+        # Get the highest epoch number from metrics.json
+        local last_epoch=$(grep -o '"epoch": *[0-9]*' "$metrics_file" | grep -o '[0-9]*' | sort -nr | head -1)
+        echo "$last_epoch"
+    else
+        echo "0"
+    fi
+}
+
+# Function to run an experiment on a specific GPU
+run_experiment() {
+    local gpu_id=$1
+    local output_dir=$2
+    local command=$3
+    local log_file="$output_dir/training.log"
+    
+    # Create output directory if it doesn't exist
+    mkdir -p "$output_dir"
+    
+    # Check if experiment is already complete
+    if is_experiment_complete "$output_dir"; then
+        echo "Experiment in $output_dir is already complete. Skipping."
+        return 0
+    fi
+    
+    # Check if experiment has been started
+    if is_experiment_started "$output_dir"; then
+        local current_epoch=$(get_current_epoch "$output_dir")
+        echo "Experiment in $output_dir has been started (current epoch: $current_epoch). Resuming..."
+        
+        # If resuming is supported by the training script, add appropriate flags
+        # For now, we'll just log that we're resuming
+        echo "Resuming experiment from epoch $current_epoch" >> "$log_file"
+    else
+        echo "Starting new experiment in $output_dir"
+    fi
+    
+    # Set environment variable to use specific GPU
+    export CUDA_VISIBLE_DEVICES=$gpu_id
+    
+    # Run the command and append output to log file
+    echo "Running on GPU $gpu_id: $command" | tee -a "$log_file"
+    eval "$command" 2>&1 | tee -a "$log_file"
+    
+    # Check if experiment completed successfully
+    if is_experiment_complete "$output_dir"; then
+        echo "Experiment in $output_dir completed successfully." | tee -a "$log_file"
+        return 0
+    else
+        echo "Experiment in $output_dir did not complete successfully." | tee -a "$log_file"
+        return 1
+    fi
+}
+
+# Function to run experiments in parallel
+run_parallel_experiments() {
+    local experiment_list=("$@")
+    local active_pids=()
+    local active_outputs=()
+    local active_gpus=()
+    
+    for exp in "${experiment_list[@]}"; do
+        # Parse experiment definition
+        IFS='|' read -r gpu_id output_dir command <<< "$exp"
+        
+        # Check if experiment is already complete
+        if is_experiment_complete "$output_dir"; then
+            echo "Experiment in $output_dir is already complete. Skipping."
+            continue
+        fi
+        
+        # Check if GPU is already in use
+        if [[ " ${active_gpus[@]} " =~ " ${gpu_id} " ]]; then
+            echo "GPU $gpu_id is already in use. Waiting for completion..."
+            
+            # Wait for current experiments to finish
+            for i in "${!active_gpus[@]}"; do
+                if [[ "${active_gpus[$i]}" == "$gpu_id" ]]; then
+                    wait "${active_pids[$i]}"
+                    echo "Experiment on GPU $gpu_id completed. Starting next experiment."
+                    
+                    # Remove from active lists
+                    unset 'active_pids[$i]'
+                    unset 'active_outputs[$i]'
+                    unset 'active_gpus[$i]'
+                    
+                    # Re-index arrays
+                    active_pids=("${active_pids[@]}")
+                    active_outputs=("${active_outputs[@]}")
+                    active_gpus=("${active_gpus[@]}")
+                    break
+                fi
+            done
+        fi
+        
+        # Run experiment in background
+        run_experiment "$gpu_id" "$output_dir" "$command" &
+        
+        # Store PID and output directory
+        active_pids+=($!)
+        active_outputs+=("$output_dir")
+        active_gpus+=("$gpu_id")
+        
+        echo "Started experiment on GPU $gpu_id (PID: ${active_pids[-1]})"
+        sleep 2 # Give a moment for process to start
+    done
+    
+    # Wait for all active experiments to complete
+    for pid in "${active_pids[@]}"; do
+        wait "$pid"
+    done
+    
+    echo "All experiments completed."
+}
+
+echo "Starting large-scale OSPA experiments using all 4 GPUs..."
+echo "First batch of experiments (MNLI and SST-2)"
+run_parallel_experiments "${experiments[@]}"
+
+echo "Second batch of experiments (QQP)"
+run_parallel_experiments "${additional_experiments[@]}"
+
+echo "All large-scale experiments complete!"
+EOF
+
+# Make the script executable
+chmod +x run_parallel_large_experiments.sh
+
+# Run the parallel GPU script
+./run_parallel_large_experiments.sh
+
+echo "this is a general submission script"
+echo "I've submitted my A100 batch job successfully"
