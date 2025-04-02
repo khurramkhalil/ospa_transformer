@@ -138,9 +138,19 @@ def train_epoch(model, dataloader, optimizer, criterion, device, scheduler=None)
         logits = logits[loss_mask]
         
         if targets.size(0) > 0:  # Skip if all targets are padding
+
             translation_loss = criterion(logits, targets)
+            # Ensure both components are scalars
+            if translation_loss.dim() > 0:
+                translation_loss = translation_loss.mean()
+            if isinstance(ortho_penalty, torch.Tensor) and ortho_penalty.dim() > 0:
+                ortho_penalty = ortho_penalty.mean()
             loss = translation_loss + ortho_penalty
-            
+
+            print(f"Loss type: {type(loss)}, shape: {loss.shape if hasattr(loss, 'shape') else 'scalar'}")
+            print(f"Translation loss type: {type(translation_loss)}, shape: {translation_loss.shape if hasattr(translation_loss, 'shape') else 'scalar'}")
+            print(f"Ortho penalty type: {type(ortho_penalty)}, shape: {ortho_penalty.shape if hasattr(ortho_penalty, 'shape') else 'scalar'}")
+
             # Backward pass
             loss.backward()
             

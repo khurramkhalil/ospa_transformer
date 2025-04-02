@@ -117,11 +117,10 @@ class TranslationModel(nn.Module):
 
         # Convert scalar penalty to tensor for DataParallel compatibility
         if isinstance(ortho_penalty, float):
-            ortho_penalty = torch.tensor(ortho_penalty, device=logits.device)
-
-        # Convert scalar penalty to tensor for DataParallel compatibility
-        if isinstance(ortho_penalty, float):
-            ortho_penalty = torch.tensor(ortho_penalty, device=logits.device)
+            ortho_penalty = torch.tensor(ortho_penalty, device=logits.device, requires_grad=True)
+        # Ensure it's a scalar tensor
+        elif isinstance(ortho_penalty, torch.Tensor) and ortho_penalty.dim() > 0:
+            ortho_penalty = ortho_penalty.mean()
 
         return logits, ortho_penalty
 
