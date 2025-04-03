@@ -159,8 +159,9 @@ run_experiment() {
 run_parallel_experiments() {
     local experiment_list=("$@")
     local active_pids=()
-    local active_outputs=()
-    local active_gpus=()
+    
+    # Group experiments by GPU
+    declare -A gpu_experiments
     
     for exp in "${experiment_list[@]}"; do
         # Parse experiment definition
@@ -172,43 +173,36 @@ run_parallel_experiments() {
             continue
         fi
         
-        # Check if GPU is already in use
-        if [[ " ${active_gpus[@]} " =~ " ${gpu_id} " ]]; then
-            echo "GPU $gpu_id is already in use. Waiting for completion..."
-            
-            # Wait for current experiments to finish
-            for i in "${!active_gpus[@]}"; do
-                if [[ "${active_gpus[$i]}" == "$gpu_id" ]]; then
-                    wait "${active_pids[$i]}"
-                    echo "Experiment on GPU $gpu_id completed. Starting next experiment."
-                    
-                    # Remove from active lists
-                    unset 'active_pids[$i]'
-                    unset 'active_outputs[$i]'
-                    unset 'active_gpus[$i]'
-                    
-                    # Re-index arrays
-                    active_pids=("${active_pids[@]}")
-                    active_outputs=("${active_outputs[@]}")
-                    active_gpus=("${active_gpus[@]}")
-                    break
-                fi
-            done
+        # Add to appropriate GPU group
+        if [[ -z ${gpu_experiments[$gpu_id]} ]]; then
+            gpu_experiments[$gpu_id]="$output_dir|$command"
+        else
+            gpu_experiments[$gpu_id]+=";$output_dir|$command"
         fi
+    done
+    
+    # Launch one process per GPU to handle all its experiments
+    for gpu_id in "${!gpu_experiments[@]}"; do
+        (
+            export CUDA_VISIBLE_DEVICES=$gpu_id
+            echo "Starting experiments on GPU $gpu_id"
+            
+            # Run experiments for this GPU sequentially
+            IFS=';' read -ra gpu_exps <<< "${gpu_experiments[$gpu_id]}"
+            for exp in "${gpu_exps[@]}"; do
+                IFS='|' read -r output_dir command <<< "$exp"
+                run_experiment "$gpu_id" "$output_dir" "$command"
+            done
+            
+            echo "All experiments on GPU $gpu_id completed"
+        ) &
         
-        # Run experiment in background
-        run_experiment "$gpu_id" "$output_dir" "$command" &
-        
-        # Store PID and output directory
         active_pids+=($!)
-        active_outputs+=("$output_dir")
-        active_gpus+=("$gpu_id")
-        
-        echo "Started experiment on GPU $gpu_id (PID: ${active_pids[-1]})"
+        echo "Started process for GPU $gpu_id (PID: ${active_pids[-1]})"
         sleep 2 # Give a moment for process to start
     done
     
-    # Wait for all active experiments to complete
+    # Wait for all GPU processes to complete
     for pid in "${active_pids[@]}"; do
         wait "$pid"
     done
