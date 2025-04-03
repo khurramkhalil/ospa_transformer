@@ -1,0 +1,8 @@
+2025-03-30 15:23:12 - ospa - INFO - Logging to experiments/large_scale/large_wmt16/wmt16_regularize_20250330-152312/ospa_20250330-152312.log
+2025-03-30 15:23:12 - ospa - INFO - Arguments: Namespace(data_dir='./data', output_dir='experiments/large_scale/large_wmt16', model_name='', max_seq_length=128, dataset_name='wmt16', language_pair='de-en', d_model=768, nhead=12, num_encoder_layers=12, num_decoder_layers=12, dim_feedforward=3072, dropout=0.1, enforce_mode='regularize', ortho_penalty_weight=0.0005, batch_size=8, learning_rate=3e-05, weight_decay=0.01, epochs=6, seed=42, num_workers=2, distributed=False, local_rank=-1)
+2025-03-30 15:23:12 - ospa - INFO - Loaded dataset from disk: ./data/de-en
+2025-03-30 15:23:12 - ospa - INFO - Creating OSPA Transformer model...
+2025-03-30 15:23:16 - ospa - INFO - Model has 332,401,653 parameters
+2025-03-30 15:23:16 - ospa - INFO - Using 4 GPUs
+2025-03-30 15:23:16 - ospa - INFO - Starting training...
+2025-03-30 15:23:16 - ospa - INFO - Epoch 1/6

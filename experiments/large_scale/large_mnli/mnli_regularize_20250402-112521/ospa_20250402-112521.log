@@ -1,0 +1,38 @@
+2025-04-02 11:25:21 - ospa - INFO - Logging to experiments/large_scale/large_mnli/mnli_regularize_20250402-112521/ospa_20250402-112521.log
+2025-04-02 11:25:21 - ospa - INFO - Arguments: Namespace(task='mnli', data_dir='./data', output_dir='experiments/large_scale/large_mnli', tokenizer='bert-base-uncased', max_seq_length=128, d_model=768, nhead=12, num_layers=12, dim_feedforward=3072, dropout=0.1, enforce_mode='regularize', ortho_penalty_weight=0.0005, batch_size=16, learning_rate=2e-05, weight_decay=0.01, epochs=8, seed=42, num_workers=0)
+2025-04-02 11:25:21 - ospa - INFO - Loading mnli dataset...
+2025-04-02 11:25:26 - ospa - INFO - Preprocessing datasets...
+2025-04-02 11:25:59 - ospa - INFO - Preparing data loaders...
+2025-04-02 11:26:36 - ospa - INFO - Creating OSPA Transformer model...
+2025-04-02 11:26:40 - ospa - INFO - Model has 108,499,203 parameters
+2025-04-02 11:26:40 - ospa - INFO - Starting training...
+2025-04-02 11:26:40 - ospa - INFO - Epoch 1/8
+2025-04-02 12:06:17 - ospa - INFO - Train Loss: 1.0732, Train Acc: 0.4231
+2025-04-02 12:06:37 - ospa - INFO - Eval Loss: 1.0508, Accuracy: 0.4560
+2025-04-02 12:06:38 - ospa - INFO - New best model saved with accuracy = 0.4560
+2025-04-02 12:06:38 - ospa - INFO - Epoch 2/8
+2025-04-02 12:46:12 - ospa - INFO - Train Loss: 1.0495, Train Acc: 0.4581
+2025-04-02 12:46:31 - ospa - INFO - Eval Loss: 1.0395, Accuracy: 0.4816
+2025-04-02 12:46:32 - ospa - INFO - New best model saved with accuracy = 0.4816
+2025-04-02 12:46:32 - ospa - INFO - Epoch 3/8
+2025-04-02 13:26:05 - ospa - INFO - Train Loss: 1.0323, Train Acc: 0.4777
+2025-04-02 13:26:25 - ospa - INFO - Eval Loss: 1.0292, Accuracy: 0.4756
+2025-04-02 13:26:25 - ospa - INFO - Epoch 4/8
+2025-04-02 14:05:57 - ospa - INFO - Train Loss: 1.0176, Train Acc: 0.4919
+2025-04-02 14:06:16 - ospa - INFO - Eval Loss: 1.0135, Accuracy: 0.4974
+2025-04-02 14:06:17 - ospa - INFO - New best model saved with accuracy = 0.4974
+2025-04-02 14:06:17 - ospa - INFO - Epoch 5/8
+2025-04-02 14:45:49 - ospa - INFO - Train Loss: 1.0037, Train Acc: 0.5046
+2025-04-02 14:46:09 - ospa - INFO - Eval Loss: 1.0051, Accuracy: 0.5058
+2025-04-02 14:46:10 - ospa - INFO - New best model saved with accuracy = 0.5058
+2025-04-02 14:46:10 - ospa - INFO - Epoch 6/8
+2025-04-02 15:25:41 - ospa - INFO - Train Loss: 0.9908, Train Acc: 0.5146
+2025-04-02 15:26:00 - ospa - INFO - Eval Loss: 1.0164, Accuracy: 0.5004
+2025-04-02 15:26:01 - ospa - INFO - Epoch 7/8
+2025-04-02 16:05:31 - ospa - INFO - Train Loss: 0.9799, Train Acc: 0.5223
+2025-04-02 16:05:51 - ospa - INFO - Eval Loss: 1.0027, Accuracy: 0.5042
+2025-04-02 16:05:51 - ospa - INFO - Epoch 8/8
+2025-04-02 16:45:21 - ospa - INFO - Train Loss: 0.9742, Train Acc: 0.5265
+2025-04-02 16:45:41 - ospa - INFO - Eval Loss: 1.0020, Accuracy: 0.5071
+2025-04-02 16:45:42 - ospa - INFO - New best model saved with accuracy = 0.5071
+2025-04-02 16:45:42 - ospa - INFO - Training completed. Best accuracy: 0.5071

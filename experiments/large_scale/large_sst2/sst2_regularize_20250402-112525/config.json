@@ -1,0 +1,20 @@
+{
+  "task": "sst2",
+  "data_dir": "./data",
+  "output_dir": "experiments/large_scale/large_sst2",
+  "tokenizer": "bert-base-uncased",
+  "max_seq_length": 128,
+  "d_model": 768,
+  "nhead": 12,
+  "num_layers": 12,
+  "dim_feedforward": 3072,
+  "dropout": 0.1,
+  "enforce_mode": "regularize",
+  "ortho_penalty_weight": 0.0005,
+  "batch_size": 16,
+  "learning_rate": 2e-05,
+  "weight_decay": 0.01,
+  "epochs": 8,
+  "seed": 42,
+  "num_workers": 0
+}
