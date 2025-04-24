@@ -216,6 +216,14 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
                 print(f"WARNING: NaN or inf in model output. Skipping batch.")
                 continue
                 
+            # Safety check: are all targets in vocab?
+            if targets.max() >= ntokens:
+                print(f"[ERROR] Max target index {targets.max().item()} ≥ vocab size {ntokens}")
+                print("This means some token in target is not in the vocabulary.")
+                print("Example invalid target:", targets)
+                exit(1)
+
+
             # Calculate loss
             loss = criterion(output.view(-1, ntokens), targets)
             
