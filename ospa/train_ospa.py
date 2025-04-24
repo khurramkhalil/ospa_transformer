@@ -298,6 +298,11 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
             orth_penalty = model.get_orthogonality_penalty()
             loss = loss + args.orth_penalty_weight * orth_penalty
         
+        # Check for NaN or infinity in loss
+        if not torch.isfinite(loss):
+            print(f"WARNING: Non-finite loss detected: {loss.item()}. Skipping batch.")
+            continue
+            
         # Backward pass and optimization
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
@@ -309,17 +314,20 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
-                  f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
-                  f'loss {cur_loss:5.2f} | ppl {math.exp(cur_loss):8.2f}')
+            
+            # Ensure the loss is in a reasonable range before computing perplexity
+            try:
+                ppl = math.exp(min(cur_loss, 20))  # Cap at 20 to prevent overflow
+                print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
+                      f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
+                      f'loss {cur_loss:5.2f} | ppl {ppl:8.2f}')
+            except OverflowError:
+                print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
+                      f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
+                      f'loss {cur_loss:5.2f} | ppl TOO LARGE')
+                
             total_loss = 0
             start_time = time.time()
-    
-    # Validate after each epoch
-    val_loss = evaluate_language_model(model, val_data, vocab, get_batch, criterion, args)
-    print(f'| End of epoch {epoch:3d} | valid loss {val_loss:5.2f} | valid ppl {math.exp(val_loss):8.2f}')
-    
-    return val_loss
 
 
 def evaluate_language_model(model, data, vocab, get_batch, criterion, args):
@@ -533,87 +541,20 @@ def track_orthogonality(model, train_dataloader, args):
     plt.savefig('orthogonality_deviation.png')
     plt.close()
 
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description='Orthogonal Subspace Projection Attention')
-    
-#     # Model configuration
-#     parser.add_argument('--transformer_type', type=str, default='ospa', choices=['ospa', 'vanilla', 'linformer'],
-#                         help='Type of transformer architecture')
-#     parser.add_argument('--task', type=str, default='lm', choices=['lm', 'classification'],
-#                         help='Task: language modeling (lm) or text classification')
-#     parser.add_argument('--d_model', type=int, default=512, help='Model dimension')
-#     parser.add_argument('--nhead', type=int, default=8, help='Number of attention heads')
-#     parser.add_argument('--nlayers', type=int, default=6, help='Number of transformer layers')
-#     parser.add_argument('--dim_feedforward', type=int, default=2048, help='Dimension of feedforward network')
-    
-#     # Orthogonality parameters
-#     parser.add_argument('--orth_mode', type=str, default='regularize', choices=['init', 'regularize', 'strict'],
-#                         help='How to enforce orthogonality')
-#     parser.add_argument('--orth_penalty_weight', type=float, default=0.01, 
-#                         help='Weight for orthogonality penalty (used in regularize mode)')
-    
-#     # Training parameters
-#     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
-#     parser.add_argument('--bptt', type=int, default=35, help='Sequence length for language modeling')
-#     parser.add_argument('--max_seq_len', type=int, default=256, help='Max sequence length for classification')
-#     parser.add_argument('--dropout', type=float, default=0.1, help='Dropout rate')
-#     parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
-#     parser.add_argument('--lr', type=float, default=5.0, help='Initial learning rate')
-#     parser.add_argument('--clip', type=float, default=0.25, help='Gradient clipping')
-#     parser.add_argument('--log_interval', type=int, default=200, help='Report interval')
-    
-#     # Other parameters
-#     parser.add_argument('--seed', type=int, default=1111, help='Random seed')
-#     parser.add_argument('--cuda', action='store_true', help='Use CUDA if available')
-#     parser.add_argument('--save', type=str, default='model.pt', help='Path to save model')
-#     parser.add_argument('--analyze', action='store_true', help='Run analysis after training')
-    
-#     args = parser.parse_args()
-    
-#     # Set device
-#     args.device = torch.device('cuda' if torch.cuda.is_available() and args.cuda else 'cpu')
-    
-#     # Set random seed
-#     torch.manual_seed(args.seed)
-    
-#     # Set up data
-#     if args.task == 'lm':
-#         train_data, val_data, test_data, vocab, get_batch = get_language_modeling_data(args)
-#         ntokens = len(vocab)
-#         criterion = nn.CrossEntropyLoss()
-#     else:  # classification
-#         train_dataloader, test_dataloader, vocab = get_classification_data(args)
-#         ntokens = len(vocab)
-#         criterion = nn.CrossEntropyLoss()
-    
-#     # Create model
-#     model = TransformerModel(
-#         transformer_type=args.transformer_type,
-#         vocab_size=ntokens,
-#         d_model=args.d_model,
-#         nhead=args.nhead,
-#         nlayers=args.nlayers,
-#         dropout=args.dropout,
-#         dim_feedforward=args.dim_feedforward,
-#         orth_mode=args.orth_mode,
-#         orth_penalty_weight=args.orth_penalty_weight,
-#         task=args.task
-#     ).to(args.device)
-    
-#     # Set up optimizer and scheduler
-#     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-#     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1.0, gamma=0.95)
     
 def train():
     """Main training function."""
+    # Print device info
+    print(f"Using device: {args.device}")
+    
+    # Ensure model is on the correct device
+    model.to(args.device)
+    
     # Training loop
     best_val_loss = float('inf')
     
     try:
         for epoch in range(1, args.epochs + 1):
-            epoch_start_time = time.time()
-            
             # Train for one epoch
             if args.task == 'lm':
                 train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args, epoch)
@@ -633,9 +574,6 @@ def train():
     
     except KeyboardInterrupt:
         print('| Keyboard interrupt - stopping training')
-    
-    # Load best model
-    model.load_state_dict(torch.load(args.save))
     
     # Final evaluation
     if args.task == 'lm':
@@ -739,85 +677,3 @@ if __name__ == "__main__":
     
     # Train the model
     train()
-
-
-# if __name__ == "__main__":
-#     parser = argparse.ArgumentParser(description='Orthogonal Subspace Projection Attention')
-    
-#     # Model configuration
-#     parser.add_argument('--transformer_type', type=str, default='ospa', choices=['ospa', 'vanilla', 'linformer'],
-#                         help='Type of transformer architecture')
-#     parser.add_argument('--task', type=str, default='lm', choices=['lm', 'classification'],
-#                         help='Task: language modeling (lm) or text classification')
-#     parser.add_argument('--d_model', type=int, default=512, help='Model dimension')
-#     parser.add_argument('--nhead', type=int, default=8, help='Number of attention heads')
-#     parser.add_argument('--nlayers', type=int, default=6, help='Number of transformer layers')
-#     parser.add_argument('--dim_feedforward', type=int, default=2048, help='Dimension of feedforward network')
-    
-#     # Orthogonality parameters
-#     parser.add_argument('--orth_mode', type=str, default='regularize', choices=['init', 'regularize', 'strict'],
-#                         help='How to enforce orthogonality')
-#     parser.add_argument('--orth_penalty_weight', type=float, default=0.01, 
-#                         help='Weight for orthogonality penalty (used in regularize mode)')
-    
-#     # Training parameters
-#     parser.add_argument('--batch_size', type=int, default=32, help='Batch size')
-#     parser.add_argument('--bptt', type=int, default=35, help='Sequence length for language modeling')
-#     parser.add_argument('--max_seq_len', type=int, default=256, help='Max sequence length for classification')
-#     parser.add_argument('--dropout', type=float, default=0.1, help='Dropout rate')
-#     parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
-#     parser.add_argument('--lr', type=float, default=5.0, help='Initial learning rate')
-#     parser.add_argument('--clip', type=float, default=0.25, help='Gradient clipping')
-#     parser.add_argument('--log_interval', type=int, default=200, help='Report interval')
-    
-#     # Other parameters
-#     parser.add_argument('--seed', type=int, default=1111, help='Random seed')
-#     parser.add_argument('--cuda', action='store_true', help='Use CUDA if available')
-#     parser.add_argument('--save', type=str, default='model.pt', help='Path to save model')
-#     parser.add_argument('--analyze', action='store_true', help='Run analysis after training')
-    
-#     args = parser.parse_args()
-    
-#     # Set device
-#     args.device = torch.device('cuda' if torch.cuda.is_available() and args.cuda else 'cpu')
-    
-#     # Set random seed
-#     torch.manual_seed(args.seed)
-    
-#     # Set up data
-#     if args.task == 'lm':
-#         train_data, val_data, test_data, vocab, get_batch = get_language_modeling_data(args)
-#         ntokens = len(vocab)
-#         criterion = nn.CrossEntropyLoss()
-#     else:  # classification
-#         train_dataloader, test_dataloader, vocab = get_classification_data(args)
-#         ntokens = len(vocab)
-#         criterion = nn.CrossEntropyLoss()
-    
-#     # Create model
-#     model = TransformerModel(
-#         transformer_type=args.transformer_type,
-#         vocab_size=ntokens,
-#         d_model=args.d_model,
-#         nhead=args.nhead,
-#         nlayers=args.nlayers,
-#         dropout=args.dropout,
-#         dim_feedforward=args.dim_feedforward,
-#         orth_mode=args.orth_mode,
-#         orth_penalty_weight=args.orth_penalty_weight,
-#         task=args.task
-#     ).to(args.device)
-    
-#     # Set up optimizer and scheduler
-#     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
-#     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=1.0, gamma=0.95)
-    
-#     # Print model
-#     print(f"Model: {args.transformer_type.upper()} Transformer")
-#     print(f"Parameters: {sum(p.numel() for p in model.parameters())/1000000:.2f}M")
-#     print(f"Orthogonality Mode: {args.orth_mode}")
-#     if args.orth_mode == 'regularize':
-#         print(f"Orthogonality Penalty Weight: {args.orth_penalty_weight}")
-    
-#     # Train the model
-#     train()
