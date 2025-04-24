@@ -307,7 +307,7 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
         if batch % args.log_interval == 0 and batch > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
+            print(f'| epoch {args.epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
                   f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
                   f'loss {cur_loss:5.2f} | ppl {math.exp(cur_loss):8.2f}')
             total_loss = 0
@@ -315,7 +315,7 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
     
     # Validate after each epoch
     val_loss = evaluate_language_model(model, val_data, vocab, get_batch, criterion, args)
-    print(f'| End of epoch {epoch:3d} | valid loss {val_loss:5.2f} | valid ppl {math.exp(val_loss):8.2f}')
+    print(f'| End of epoch {args.epoch:3d} | valid loss {val_loss:5.2f} | valid ppl {math.exp(val_loss):8.2f}')
     
     return val_loss
 
@@ -376,7 +376,7 @@ def train_classifier(model, train_dataloader, optimizer, criterion, scheduler, a
         if batch_idx % args.log_interval == 0 and batch_idx > 0:
             cur_loss = total_loss / args.log_interval
             elapsed = time.time() - start_time
-            print(f'| epoch {epoch:3d} | {batch_idx:5d}/{len(train_dataloader):5d} batches | '
+            print(f'| epoch {args.epoch:3d} | {batch_idx:5d}/{len(train_dataloader):5d} batches | '
                   f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
                   f'loss {cur_loss:5.2f} | acc {100 * correct / total:.2f}%')
             total_loss = 0
