@@ -8,9 +8,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
 # import torchtext
-from torchtext.datasets import WikiText2, IMDB
-from torchtext.data.utils import get_tokenizer
-from torchtext.vocab import build_vocab_from_iterator
+# from torchtext.datasets import WikiText2, IMDB
+# from torchtext.data.utils import get_tokenizer
+# from torchtext.vocab import build_vocab_from_iterator
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
@@ -141,16 +141,16 @@ class TransformerModel(nn.Module):
 
 
 def get_language_modeling_data(args):
-    """Prepare data for language modeling task (WikiText-2) using the datasets library."""
+    """Prepare data for language modeling task (WikiText-2) using only the datasets library."""
     import torch
     from datasets import load_dataset
-    from torchtext.data.utils import get_tokenizer
     
     # Load WikiText-2 dataset
     wikitext = load_dataset("wikitext", "wikitext-2-v1")
     
-    # Tokenizer
-    tokenizer = get_tokenizer('basic_english')
+    # Simple tokenizer function (split by whitespace)
+    def tokenize(text):
+        return text.split()
     
     # Build vocabulary from tokens
     vocab = {}
@@ -164,7 +164,7 @@ def get_language_modeling_data(args):
     # Process all training tokens and build vocabulary
     for text in wikitext['train']['text']:
         if text.strip():  # Skip empty lines
-            for token in tokenizer(text):
+            for token in tokenize(text):
                 if token not in vocab:
                     vocab[token] = len(vocab)
                 word_count[token] = word_count.get(token, 0) + 1
@@ -174,8 +174,8 @@ def get_language_modeling_data(args):
         data = []
         for text in raw_text_iter:
             if text.strip():  # Skip empty lines
-                tokens = torch.tensor([vocab.get(token, vocab['<unk>']) for token in tokenizer(text)], 
-                                     dtype=torch.long)
+                tokens = torch.tensor([vocab.get(token, vocab['<unk>']) for token in tokenize(text)], 
+                                    dtype=torch.long)
                 if len(tokens) > 0:
                     data.append(tokens)
         return torch.cat(data)
@@ -208,74 +208,72 @@ def get_language_modeling_data(args):
     return train_data, val_data, test_data, vocab, get_batch
 
 
-def get_classification_data(args):
-    """Prepare data for text classification task (IMDB) using the datasets library."""
+def get_language_modeling_data(args):
+    """Prepare data for language modeling task (WikiText-2) using only the datasets library."""
     import torch
-    from torch.utils.data import DataLoader
     from datasets import load_dataset
-    from torchtext.data.utils import get_tokenizer
     
-    # Load IMDB dataset
-    imdb = load_dataset("imdb")
+    # Load WikiText-2 dataset
+    wikitext = load_dataset("wikitext", "wikitext-2-v1")
     
-    # Tokenizer
-    tokenizer = get_tokenizer('basic_english')
+    # Simple tokenizer function (split by whitespace)
+    def tokenize(text):
+        return text.split()
     
     # Build vocabulary from tokens
     vocab = {}
     word_count = {}
     
     # Add special tokens
-    special_tokens = ['<unk>', '<pad>']
+    special_tokens = ['<unk>', '<pad>', '<bos>', '<eos>']
     for i, token in enumerate(special_tokens):
         vocab[token] = i
     
-    # Process a subset of training tokens and build vocabulary (for efficiency)
-    for i, example in enumerate(imdb['train']):
-        if i >= 5000:  # Limit processing for speed
-            break
-        text = example['text']
-        for token in tokenizer(text):
-            if token not in vocab:
-                vocab[token] = len(vocab)
-            word_count[token] = word_count.get(token, 0) + 1
+    # Process all training tokens and build vocabulary
+    for text in wikitext['train']['text']:
+        if text.strip():  # Skip empty lines
+            for token in tokenize(text):
+                if token not in vocab:
+                    vocab[token] = len(vocab)
+                word_count[token] = word_count.get(token, 0) + 1
     
-    # Define collate function for DataLoader
-    def collate_batch(batch):
-        label_list, text_list = [], []
-        for example in batch:
-            label_list.append(1 if example['label'] == 1 else 0)
-            processed_text = torch.tensor([vocab.get(token, vocab['<unk>']) for token in tokenizer(example['text'])], 
-                                         dtype=torch.long)
-            # Truncate or pad to fixed length
-            if len(processed_text) > args.max_seq_len:
-                processed_text = processed_text[:args.max_seq_len]
-            else:
-                processed_text = torch.cat([
-                    processed_text, 
-                    torch.ones(args.max_seq_len - len(processed_text), dtype=torch.long) * vocab['<pad>']
-                ])
-            text_list.append(processed_text)
-            
-        label_tensor = torch.tensor(label_list, dtype=torch.long)
-        text_tensor = torch.stack(text_list)
-        return text_tensor.t(), label_tensor  # [seq_len, batch_size], [batch_size]
+    # Process datasets
+    def data_process(raw_text_iter):
+        data = []
+        for text in raw_text_iter:
+            if text.strip():  # Skip empty lines
+                tokens = torch.tensor([vocab.get(token, vocab['<unk>']) for token in tokenize(text)], 
+                                    dtype=torch.long)
+                if len(tokens) > 0:
+                    data.append(tokens)
+        return torch.cat(data)
     
-    # Create DataLoaders
-    train_dataloader = DataLoader(
-        imdb['train'], 
-        batch_size=args.batch_size,
-        shuffle=True,
-        collate_fn=collate_batch
-    )
-    test_dataloader = DataLoader(
-        imdb['test'], 
-        batch_size=args.batch_size,
-        shuffle=False,
-        collate_fn=collate_batch
-    )
+    train_data = data_process(wikitext['train']['text'])
+    val_data = data_process(wikitext['validation']['text'])
+    test_data = data_process(wikitext['test']['text'])
     
-    return train_dataloader, test_dataloader, vocab
+    # Batch data
+    def batchify(data, batch_size):
+        # Work out how cleanly we can divide the dataset into batch_size parts
+        nbatch = data.size(0) // batch_size
+        # Trim off any extra elements that wouldn't cleanly fit
+        data = data.narrow(0, 0, nbatch * batch_size)
+        # Evenly divide the data across the batch_size batches
+        data = data.view(batch_size, -1).t().contiguous()
+        return data.to(args.device)
+    
+    train_data = batchify(train_data, args.batch_size)
+    val_data = batchify(val_data, args.batch_size)
+    test_data = batchify(test_data, args.batch_size)
+    
+    # Create batches for training
+    def get_batch(source, i, bptt):
+        seq_len = min(bptt, len(source) - 1 - i)
+        data = source[i:i+seq_len]
+        target = source[i+1:i+1+seq_len].reshape(-1)
+        return data, target
+    
+    return train_data, val_data, test_data, vocab, get_batch
 
 
 def train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args):
