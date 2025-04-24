@@ -516,7 +516,7 @@ def train(args):
                 train_classifier(model, train_dataloader, optimizer, criterion, scheduler, args, epoch)
                 val_loss, _ = evaluate_classifier(model, test_dataloader, criterion, args)
             
-            history_data[epoch] = [val_loss, f'{math.exp(min(test_loss, 20)):8.2f}']
+            history_data[epoch] = [val_loss, f'{math.exp(min(val_loss, 20)):8.2f}']
             
             # Save model if validation loss improved
             if val_loss < best_val_loss:
@@ -537,19 +537,19 @@ def train(args):
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path))
 
-
-    filepath = args.output_dir + ".json"
-    with open(filepath, 'w') as f:
-        json.dump([history_data], f, indent=2)
-
     # Final evaluation
     if args.task == 'lm':
         test_loss = evaluate_language_model(model, test_data, vocab, get_batch, criterion, args)
         print(f'| End of training | test loss {test_loss:5.2f} | test ppl {math.exp(min(test_loss, 20)):8.2f}')
+        history_data['test_loss'] = [test_loss, f'{math.exp(min(test_loss, 20)):8.2f}']
     else:  # classification
         test_loss, test_acc = evaluate_classifier(model, test_dataloader, criterion, args)
         print(f'| End of training | test loss {test_loss:5.2f} | test accuracy {test_acc:5.2f}%')
+        history_data['test_loss'] = [test_loss, f'{math.exp(min(test_acc, 20)):8.2f}']
 
+    filepath = args.output_dir + ".json"
+    with open(filepath, 'w') as f:
+        json.dump([history_data], f, indent=2)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Orthogonal Subspace Projection Attention')
