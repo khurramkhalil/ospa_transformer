@@ -136,9 +136,8 @@ class TransformerModel(nn.Module):
 
 
 def get_language_modeling_data(args):
-    """Prepare data for language modeling task (WikiText-2) using only the datasets library."""
+    """Prepare data for language modeling task (WikiText-2) using datasets library."""
     import torch
-    from datasets import load_dataset
     
     # Load WikiText-2 dataset
     wikitext = load_dataset("wikitext", "wikitext-2-v1")
@@ -157,38 +156,57 @@ def get_language_modeling_data(args):
         vocab[token] = i
     
     # Process all training tokens and build vocabulary
-    for text in wikitext['train']['text']:
+    print("Building vocabulary...")
+    for text in tqdm(wikitext['train']['text']):
         if text.strip():  # Skip empty lines
             for token in tokenize(text):
                 if token not in vocab:
                     vocab[token] = len(vocab)
                 word_count[token] = word_count.get(token, 0) + 1
     
+    # Optionally limit vocabulary size (can help with stability)
+    if args.vocab_cutoff > 0 and len(vocab) > args.vocab_cutoff:
+        print(f"Limiting vocabulary from {len(vocab)} to {args.vocab_cutoff} tokens")
+        # Sort by frequency
+        sorted_words = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+        # Keep only most frequent words
+        new_vocab = {token: i for i, token in enumerate(special_tokens)}
+        for i, (token, _) in enumerate(sorted_words[:args.vocab_cutoff - len(special_tokens)]):
+            new_vocab[token] = i + len(special_tokens)
+        vocab = new_vocab
+    
+    print(f"Vocabulary size: {len(vocab)}")
+    
     # Process datasets
     def data_process(raw_text_iter):
         data = []
-        for text in raw_text_iter:
+        for text in tqdm(raw_text_iter):
             if text.strip():  # Skip empty lines
-                tokens = torch.tensor([vocab.get(token, vocab['<unk>']) for token in tokenize(text)], 
-                                    dtype=torch.long)
-                if len(tokens) > 0:
-                    data.append(tokens)
+                tokens = [vocab.get(token, vocab['<unk>']) for token in tokenize(text)]
+                if tokens:
+                    data.append(torch.tensor(tokens, dtype=torch.long))
         return torch.cat(data)
     
+    print("Processing train data...")
     train_data = data_process(wikitext['train']['text'])
+    print("Processing validation data...")
     val_data = data_process(wikitext['validation']['text'])
+    print("Processing test data...")
     test_data = data_process(wikitext['test']['text'])
     
     # Batch data
     def batchify(data, batch_size):
         # Work out how cleanly we can divide the dataset into batch_size parts
         nbatch = data.size(0) // batch_size
+        if nbatch == 0:
+            raise ValueError(f"Dataset too small for batch size {batch_size}")
         # Trim off any extra elements that wouldn't cleanly fit
         data = data.narrow(0, 0, nbatch * batch_size)
         # Evenly divide the data across the batch_size batches
         data = data.view(batch_size, -1).t().contiguous()
         return data.to(args.device)
     
+    print("Batchifying data...")
     train_data = batchify(train_data, args.batch_size)
     val_data = batchify(val_data, args.batch_size)
     test_data = batchify(test_data, args.batch_size)
@@ -276,75 +294,100 @@ def get_classification_data(args):
 def train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args, epoch):
     """Train a language model on WikiText-2."""
     model.train()
-    total_loss = 0.
+    total_loss = 0.0
     start_time = time.time()
     ntokens = len(vocab)
     
-    for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
-        # Debug code to add in your training loop
+    # Use gradient accumulation if batch size is very large
+    effective_batch_size = args.batch_size * args.gradient_accumulation_steps
+    
+    pbar = tqdm(range(0, train_data.size(0) - 1, args.bptt), 
+               desc=f"Epoch {epoch}/{args.epochs}")
+    
+    for batch, i in enumerate(pbar):
         data, targets = get_batch(train_data, i, args.bptt)
-        print(f"Data shape: {data.shape}, Targets shape: {targets.shape}")
-        print(f"Data device: {data.device}, Model device: {next(model.parameters()).device}")
-        print(f"Data range: {data.min().item()}-{data.max().item()}, Target range: {targets.min().item()}-{targets.max().item()}")
-        print(f"Vocab size: {len(vocab)}, Output dim: {model.output_layer.weight.shape[0]}")
-
-        # Forward pass
-        output = model(data)
-        print(f"Output shape: {output.shape}, Output range: {output.min().item()}-{output.max().item()}")
-
-        # Check for extreme values
-        if torch.abs(output).max() > 1000:
-            print("WARNING: Extremely large output values detected!")
-
-        # Reshape for loss calculation 
-        reshaped_output = output.view(-1, len(vocab))
-        print(f"Reshaped output: {reshaped_output.shape}")
-
-        # Calculate loss
-        loss = criterion(reshaped_output, targets)
-        print(f"Initial loss: {loss.item()}")
-
-        optimizer.zero_grad()
         
-        # Forward pass
-        output = model(data)
-        loss = criterion(output.view(-1, ntokens), targets)
+        # Clear gradients only at the beginning of accumulation steps
+        if batch % args.gradient_accumulation_steps == 0:
+            optimizer.zero_grad()
         
-        # Add orthogonality penalty if using OSPA with regularize mode
-        if model.transformer_type == "ospa" and model.orth_mode == "regularize":
-            orth_penalty = model.get_orthogonality_penalty()
-            loss = loss + args.orth_penalty_weight * orth_penalty
-        
-        # Check for NaN or infinity in loss
-        if not torch.isfinite(loss):
-            print(f"WARNING: Non-finite loss detected: {loss.item()}. Skipping batch.")
-            continue
+        try:
+            # Forward pass
+            output = model(data)
             
-        # Backward pass and optimization
-        loss.backward()
-        torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-        optimizer.step()
-        
-        total_loss += loss.item()
-        
-        # Log progress
-        if batch % args.log_interval == 0 and batch > 0:
-            cur_loss = total_loss / args.log_interval
-            elapsed = time.time() - start_time
-            
-            # Ensure the loss is in a reasonable range before computing perplexity
-            try:
-                ppl = math.exp(min(cur_loss, 20))  # Cap at 20 to prevent overflow
-                print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
-                      f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
-                      f'loss {cur_loss:5.2f} | ppl {ppl:8.2f}')
-            except OverflowError:
-                print(f'| epoch {epoch:3d} | {batch:5d}/{len(train_data) // args.bptt:5d} batches | '
-                      f'lr {scheduler.get_last_lr()[0]:02.6f} | ms/batch {elapsed * 1000 / args.log_interval:5.2f} | '
-                      f'loss {cur_loss:5.2f} | ppl TOO LARGE')
+            # Check for NaN or inf in output
+            if torch.isnan(output).any() or torch.isinf(output).any():
+                print(f"WARNING: NaN or inf in model output. Skipping batch.")
+                continue
                 
-            total_loss = 0
-            start_time = time.time()
+            # Calculate loss
+            loss = criterion(output.view(-1, ntokens), targets)
+            
+            # Add orthogonality penalty if using OSPA with regularize mode
+            if model.transformer_type == "ospa" and model.orth_mode == "regularize":
+                orth_penalty = model.get_orthogonality_penalty()
+                loss = loss + args.orth_penalty_weight * orth_penalty
+            
+            # Scale loss for gradient accumulation
+            if args.gradient_accumulation_steps > 1:
+                loss = loss / args.gradient_accumulation_steps
+                
+            # Backward pass
+            loss.backward()
+            
+            # Accumulate gradients for multiple steps
+            if (batch + 1) % args.gradient_accumulation_steps == 0 or (batch + 1) == len(pbar):
+                # Clip gradients
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+                
+                # Update weights
+                optimizer.step()
+                
+                # Update scheduler
+                if args.scheduler_update_every_step:
+                    scheduler.step()
+            
+            # Update metrics
+            total_loss += loss.item() * args.gradient_accumulation_steps
+            
+            # Log progress
+            if batch % args.log_interval == 0 and batch > 0:
+                cur_loss = total_loss / args.log_interval
+                elapsed = time.time() - start_time
+                
+                # Calculate perplexity safely
+                try:
+                    # Cap loss to prevent overflow
+                    safe_loss = min(cur_loss, 20)
+                    ppl = math.exp(safe_loss)
+                    ppl_str = f"{ppl:.2f}"
+                except OverflowError:
+                    ppl_str = "N/A"
+                
+                pbar.set_postfix({
+                    'loss': f"{cur_loss:.2f}",
+                    'ppl': ppl_str,
+                    'ms/batch': f"{elapsed * 1000 / args.log_interval:.2f}"
+                })
+                
+                total_loss = 0
+                start_time = time.time()
+                
+        except RuntimeError as e:
+            print(f"ERROR: {e}")
+            print(f"Skipping problematic batch")
+            optimizer.zero_grad()
+            continue
+    
+    # Update learning rate scheduler at the end of epoch if not updated per step
+    if not args.scheduler_update_every_step:
+        scheduler.step()
+    
+    # Validate after each epoch
+    val_loss = evaluate_language_model(model, val_data, vocab, get_batch, criterion, args)
+    print(f'| End of epoch {epoch:3d} | valid loss {val_loss:5.2f} | valid ppl {math.exp(min(val_loss, 20)):8.2f}')
+    
+    return val_loss
 
 
 def evaluate_language_model(model, data, vocab, get_batch, criterion, args):
