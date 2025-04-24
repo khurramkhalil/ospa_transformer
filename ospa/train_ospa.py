@@ -281,7 +281,29 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
     ntokens = len(vocab)
     
     for batch, i in enumerate(range(0, train_data.size(0) - 1, args.bptt)):
+        # Debug code to add in your training loop
         data, targets = get_batch(train_data, i, args.bptt)
+        print(f"Data shape: {data.shape}, Targets shape: {targets.shape}")
+        print(f"Data device: {data.device}, Model device: {next(model.parameters()).device}")
+        print(f"Data range: {data.min().item()}-{data.max().item()}, Target range: {targets.min().item()}-{targets.max().item()}")
+        print(f"Vocab size: {len(vocab)}, Output dim: {model.output_layer.weight.shape[0]}")
+
+        # Forward pass
+        output = model(data)
+        print(f"Output shape: {output.shape}, Output range: {output.min().item()}-{output.max().item()}")
+
+        # Check for extreme values
+        if torch.abs(output).max() > 1000:
+            print("WARNING: Extremely large output values detected!")
+
+        # Reshape for loss calculation 
+        reshaped_output = output.view(-1, len(vocab))
+        print(f"Reshaped output: {reshaped_output.shape}")
+
+        # Calculate loss
+        loss = criterion(reshaped_output, targets)
+        print(f"Initial loss: {loss.item()}")
+
         optimizer.zero_grad()
         
         # Forward pass
