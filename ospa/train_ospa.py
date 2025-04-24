@@ -6,11 +6,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch.utils.data import DataLoader
-# import torchtext
-# from torchtext.datasets import WikiText2, IMDB
-# from torchtext.data.utils import get_tokenizer
-# from torchtext.vocab import build_vocab_from_iterator
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
