@@ -17,98 +17,78 @@ from improved_transformer_model import TransformerModel
 
 def get_language_modeling_data(args):
     """Prepare data for language modeling task (WikiText-2) using datasets library."""
+    from datasets import load_dataset
+    from tqdm import tqdm
     import torch
-    
+
     # Load WikiText-2 dataset
     wikitext = load_dataset("wikitext", "wikitext-2-v1")
-    
-    # Simple tokenizer function (split by whitespace)
+
+    # Tokenizer: simple whitespace split
     def tokenize(text):
         return text.split()
-    
-    # Build vocabulary from tokens
-    vocab = {}
-    word_count = {}
-    
-    # Add special tokens
+
+    # Special tokens and initial vocab
     special_tokens = ['<unk>', '<pad>', '<bos>', '<eos>']
     vocab = {token: idx for idx, token in enumerate(special_tokens)}
-    for i, token in enumerate(special_tokens):
-        vocab[token] = i
-    
-    # Process all training tokens and build vocabulary
+    word_count = {}
+
+    # Count token frequencies
     print("Building vocabulary...")
     for text in tqdm(wikitext['train']['text']):
-        if text.strip():  # Skip empty lines
+        if text.strip():
             for token in tokenize(text):
-                if token not in vocab:
-                    vocab[token] = len(vocab)
-                word_count[token] = word_count.get(token, 0) + 1
-    
-    # Optionally limit vocabulary size (can help with stability)
-    if args.vocab_cutoff > 0 and len(vocab) > args.vocab_cutoff:
-        print(f"Limiting vocabulary from {len(vocab)} to {args.vocab_cutoff} tokens")
-        # Sort by frequency
-        sorted_words = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
-        # Keep only most frequent words
-        new_vocab = {token: i for i, token in enumerate(special_tokens)}
-        for i, (token, _) in enumerate(sorted_words[:args.vocab_cutoff - len(special_tokens)]):
-            new_vocab[token] = i + len(special_tokens)
-        vocab = new_vocab
+                if token not in special_tokens:
+                    word_count[token] = word_count.get(token, 0) + 1
 
-    assert '<unk>' in vocab and vocab['<unk>'] == 0
-    print(f"Vocabulary size: {len(vocab)}")
-    
-    # Process datasets
-    def data_process(raw_text_iter):
-        for text in tqdm(wikitext['train']['text']):
-            if text.strip():
-                tokens = tokenize(text)
-                ids = [vocab.get(token, vocab['<unk>']) for token in tokens]
-                if any(t >= len(vocab) or t < 0 for t in ids):
-                    print("Out of bound token ID found!", tokens)
-                    exit(1)
+    # Limit vocabulary if needed
+    if args.vocab_cutoff > 0:
+        print(f"Limiting vocabulary to {args.vocab_cutoff} tokens (including special tokens)")
+        sorted_tokens = sorted(word_count.items(), key=lambda x: x[1], reverse=True)
+        for token, _ in sorted_tokens[:args.vocab_cutoff - len(special_tokens)]:
+            vocab[token] = len(vocab)
+    else:
+        for token in word_count:
+            vocab[token] = len(vocab)
 
+    assert '<unk>' in vocab and vocab['<unk>'] == 0, "Special token <unk> must be at index 0"
+    print(f"Final vocabulary size: {len(vocab)}")
+
+    # Convert text to token IDs
+    def data_process(text_iter):
         data = []
-        for text in tqdm(raw_text_iter):
-            if text.strip():  # Skip empty lines
+        for text in tqdm(text_iter):
+            if text.strip():
                 tokens = [vocab.get(token, vocab['<unk>']) for token in tokenize(text)]
                 if tokens:
                     data.append(torch.tensor(tokens, dtype=torch.long))
         return torch.cat(data)
-    
-    print("Processing train data...")
+
+    print("Processing datasets...")
     train_data = data_process(wikitext['train']['text'])
-    print("Processing validation data...")
     val_data = data_process(wikitext['validation']['text'])
-    print("Processing test data...")
     test_data = data_process(wikitext['test']['text'])
-    
-    # Batch data
+
+    # Reshape data into batches
     def batchify(data, batch_size):
-        # Work out how cleanly we can divide the dataset into batch_size parts
         nbatch = data.size(0) // batch_size
-        if nbatch == 0:
-            raise ValueError(f"Dataset too small for batch size {batch_size}")
-        # Trim off any extra elements that wouldn't cleanly fit
-        data = data.narrow(0, 0, nbatch * batch_size)
-        # Evenly divide the data across the batch_size batches
-        data = data.reshape(batch_size, -1).t().contiguous()
+        data = data[:nbatch * batch_size].view(batch_size, -1).t().contiguous()
         return data.to(args.device)
-    
-    print("Batchifying data...")
+
+    print("Batchifying...")
     train_data = batchify(train_data, args.batch_size)
     val_data = batchify(val_data, args.batch_size)
     test_data = batchify(test_data, args.batch_size)
-    
-    # Create batches for training
+
+    # Create batched slices
     def get_batch(source, i, bptt):
         seq_len = min(bptt, len(source) - 1 - i)
         data = source[i:i+seq_len]
         target = source[i+1:i+1+seq_len].reshape(-1)
         return data, target
-    
+
     return train_data, val_data, test_data, vocab, get_batch
+
 
 
 def get_classification_data(args):
@@ -544,7 +524,7 @@ def train(args):
                 print("[ERROR] Failed to save model due to:", e)
                 print("This likely means a CUDA assertion failed earlier.")
                 exit(1)
-                
+
     except KeyboardInterrupt:
         print('| Keyboard interrupt - stopping training')
     
