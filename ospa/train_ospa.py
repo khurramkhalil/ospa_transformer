@@ -1,4 +1,5 @@
 import os
+import json
 import argparse
 import time
 import math
@@ -501,6 +502,7 @@ def train(args):
     
     # Training loop
     best_val_loss = float('inf')
+    history_data = {}
     
     try:
         for epoch in range(1, args.epochs + 1):
@@ -513,6 +515,8 @@ def train(args):
             else:  # classification
                 train_classifier(model, train_dataloader, optimizer, criterion, scheduler, args, epoch)
                 val_loss, _ = evaluate_classifier(model, test_dataloader, criterion, args)
+            
+            history_data[epoch] = [val_loss, f'{math.exp(min(test_loss, 20)):8.2f}']
             
             # Save model if validation loss improved
             if val_loss < best_val_loss:
@@ -532,7 +536,12 @@ def train(args):
     model_path = os.path.join(args.output_dir, args.save)
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path))
-    
+
+
+    filepath = args.output_dir + ".json"
+    with open(filepath, 'w') as f:
+        json.dump([history_data], f, indent=2)
+
     # Final evaluation
     if args.task == 'lm':
         test_loss = evaluate_language_model(model, test_data, vocab, get_batch, criterion, args)
@@ -566,7 +575,7 @@ if __name__ == "__main__":
     parser.add_argument('--bptt', type=int, default=35, help='Sequence length for language modeling')
     parser.add_argument('--max_seq_len', type=int, default=256, help='Max sequence length for classification')
     parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate')
-    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs')
+    parser.add_argument('--epochs', type=int, default=20, help='Number of training epochs')
     parser.add_argument('--lr', type=float, default=5e-4, help='Initial learning rate')
     parser.add_argument('--clip', type=float, default=1.0, help='Gradient clipping value')
     parser.add_argument('--weight_decay', type=float, default=0.01, help='Weight decay')
@@ -581,4 +590,7 @@ if __name__ == "__main__":
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
 
     args = parser.parse_args()
+    args.output = str(args.task) + "_" + \
+        str(args.orth_mode)  + "_" + str(args.orth_penalty_weight) + "_" +str(args.d_model)  + \
+            "_" + str(args.nhead) + "_" + str(args.nlayers) + "_" + str(args.dim_feedforward)
     train(args)
