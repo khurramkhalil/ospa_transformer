@@ -481,6 +481,8 @@ def train(args):
         orth_penalty_weight=args.orth_penalty_weight,
         task=args.task
     ).to(args.device)
+
+    print("Model output dim:", model.output_layer.out_features, "| Vocab size:", ntokens)
     
     # Set up optimizer and scheduler
     print("Setting up optimizer and scheduler...")
