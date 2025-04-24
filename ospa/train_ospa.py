@@ -32,6 +32,7 @@ def get_language_modeling_data(args):
     
     # Add special tokens
     special_tokens = ['<unk>', '<pad>', '<bos>', '<eos>']
+    vocab = {token: idx for idx, token in enumerate(special_tokens)}
     for i, token in enumerate(special_tokens):
         vocab[token] = i
     
@@ -54,11 +55,20 @@ def get_language_modeling_data(args):
         for i, (token, _) in enumerate(sorted_words[:args.vocab_cutoff - len(special_tokens)]):
             new_vocab[token] = i + len(special_tokens)
         vocab = new_vocab
-    
+
+    assert '<unk>' in vocab and vocab['<unk>'] == 0
     print(f"Vocabulary size: {len(vocab)}")
     
     # Process datasets
     def data_process(raw_text_iter):
+        for text in tqdm(wikitext['train']['text']):
+            if text.strip():
+                tokens = tokenize(text)
+                ids = [vocab.get(token, vocab['<unk>']) for token in tokens]
+                if any(t >= len(vocab) or t < 0 for t in ids):
+                    print("Out of bound token ID found!", tokens)
+                    exit(1)
+
         data = []
         for text in tqdm(raw_text_iter):
             if text.strip():  # Skip empty lines
@@ -83,7 +93,7 @@ def get_language_modeling_data(args):
         # Trim off any extra elements that wouldn't cleanly fit
         data = data.narrow(0, 0, nbatch * batch_size)
         # Evenly divide the data across the batch_size batches
-        data = data.view(batch_size, -1).t().contiguous()
+        data = data.reshape(batch_size, -1).t().contiguous()
         return data.to(args.device)
     
     print("Batchifying data...")
@@ -228,7 +238,7 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
             assert targets.max() < ntokens, f"Invalid target index {targets.max().item()} >= vocab size {ntokens}"
 
             # Calculate loss
-            loss = criterion(output.view(-1, ntokens), targets)
+            loss = criterion(output.reshape(-1, ntokens), targets)
             
             # Add orthogonality penalty if using OSPA with regularize mode
             if model.transformer_type == "ospa" and model.orth_mode == "regularize":
@@ -315,7 +325,7 @@ def evaluate_language_model(model, data, vocab, get_batch, criterion, args):
                 if torch.isnan(output).any() or torch.isinf(output).any():
                     continue
                     
-                loss = criterion(output.view(-1, ntokens), targets).item()
+                loss = criterion(output.reshape(-1, ntokens), targets).item()
                 total_loss += loss * targets.size(0)
             except RuntimeError:
                 # Skip problematic batches
@@ -527,9 +537,14 @@ def train(args):
             # Save model if validation loss improved
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
+            try:
                 torch.save(model.state_dict(), os.path.join(args.output_dir, args.save))
                 print(f'| Saving model to {os.path.join(args.output_dir, args.save)}')
-    
+            except RuntimeError as e:
+                print("[ERROR] Failed to save model due to:", e)
+                print("This likely means a CUDA assertion failed earlier.")
+                exit(1)
+                
     except KeyboardInterrupt:
         print('| Keyboard interrupt - stopping training')
     
