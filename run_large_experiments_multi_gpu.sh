@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Set CUDA visible devices based on availability
-export CUDA_VISIBLE_DEVICES=0,1,2,3
+# export CUDA_VISIBLE_DEVICES=0,1,2,3
 
 # Add the project root to Python path
 export PYTHONPATH=$PYTHONPATH:$(pwd)
