@@ -223,6 +223,7 @@ def train_language_model(model, train_data, val_data, vocab, get_batch, optimize
                 print("Example invalid target:", targets)
                 exit(1)
 
+            assert targets.max() < ntokens, f"Invalid target index {targets.max().item()} >= vocab size {ntokens}"
 
             # Calculate loss
             loss = criterion(output.view(-1, ntokens), targets)
