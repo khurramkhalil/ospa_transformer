@@ -138,6 +138,7 @@ class TransformerModel(nn.Module):
 def get_language_modeling_data(args):
     """Prepare data for language modeling task (WikiText-2) using datasets library."""
     import torch
+    from datasets import load_dataset
     
     # Load WikiText-2 dataset
     wikitext = load_dataset("wikitext", "wikitext-2-v1")
