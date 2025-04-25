@@ -1,15 +1,15 @@
 #!/bin/bash
 #SBATCH --partition=rss-gpu
 #SBATCH -N 1
-#SBATCH -c 32
-#SBATCH --mem 100G
-#SBATCH --gres=gpu:A100:1
+#SBATCH -c 60
+#SBATCH --mem 0G
+#SBATCH --gres=gpu:A100:4
 #SBATCH --export=all
-#SBATCH --out=OSPA_Experiments-%j.out
-#SBATCH --output=ospa_output.%J_stdout.txt
-#SBATCH --error=ospa_error.%J_stderr.txt
+#SBATCH --out=OSPA_Analysis-%j.out
+#SBATCH --output=ospa_analysis.%J_stdout.txt
+#SBATCH --error=ospa_analysis.%J_stderr.txt
 #SBATCH --time=100:00:00
-#SBATCH --job-name=OSPA_Experiments
+#SBATCH --job-name=OSPA_Analysis
 #SBATCH --mail-user=khurram.khalil@missouri.edu
 #SBATCH --mail-type=ALL
 
@@ -17,125 +17,179 @@
 module load miniconda3/4.10.3_gcc_9.5.0
 source activate deepseek
 
-# Create output directories
-mkdir -p outputs/language_modeling
-mkdir -p outputs/classification
-
-# Set common parameters
-COMMON_LM_PARAMS="--task lm --d_model 512 --nlayers 6 --nhead 8 --dim_feedforward 2048 --bptt 70 --vocab_cutoff 30000 --epochs 20 --batch_size 64 --gradient_accumulation_steps 2 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50"
-COMMON_CLS_PARAMS="--task classification --d_model 256 --nlayers 4 --nhead 4 --dim_feedforward 1024 --max_seq_len 512 --epochs 15 --batch_size 32 --gradient_accumulation_steps 1 --lr 2e-4 --weight_decay 0.01 --clip 0.5 --log_interval 25"
-
-# Function to run an experiment with given parameters
-run_experiment() {
-    local task=$1
-    local model_type=$2
-    local orth_mode=$3
-    local orth_weight=$4
-    local seed=$5
-    local output_dir=$6
-    local extra_params=$7
-    
-    local experiment_name="${task}_${model_type}_${orth_mode}"
-    if [ "$model_type" == "ospa" ] && [ "$orth_mode" == "regularize" ]; then
-        experiment_name="${experiment_name}_lambda${orth_weight}"
-    fi
-    experiment_name="${experiment_name}_seed${seed}"
-    
-    echo "=========================================================="
-    echo "Starting experiment: ${experiment_name}"
-    echo "=========================================================="
-    
-    if [ "$task" == "lm" ]; then
-        base_params=$COMMON_LM_PARAMS
-    else
-        base_params=$COMMON_CLS_PARAMS
-    fi
-    
-    # Build command
-    cmd="python train_ospa.py ${base_params} --transformer_type ${model_type} --orth_mode ${orth_mode} --orth_penalty_weight ${orth_weight} --seed ${seed} --output_dir ${output_dir} --save ${experiment_name}.pt ${extra_params}"
-    
-    echo "Running command: $cmd"
-    eval $cmd
-    
-    echo "Experiment ${experiment_name} completed."
-    echo "=========================================================="
-}
-
-# Log start time
-echo "Starting OSPA experiments at $(date)"
+echo "Starting OSPA analysis job at $(date)"
 echo "Running on host: $(hostname)"
 echo "CUDA devices: $CUDA_VISIBLE_DEVICES"
 echo "SLURM Job ID: $SLURM_JOB_ID"
 
-# PART 1: Language Modeling Experiments (WikiText-2)
-echo "============= LANGUAGE MODELING EXPERIMENTS ============="
+# Create analysis directory
+mkdir -p outputs/analysis
 
-# 1. Vanilla Transformer Baseline (3 seeds)
-for seed in 42 43 44; do
-    run_experiment "lm" "vanilla" "init" "0.0" $seed "outputs/language_modeling" "--scheduler_update_every_step"
+# Step 1: Analyze existing best_model.pt
+echo "=========================================================="
+echo "Analyzing existing best model"
+echo "=========================================================="
+
+# First, determine what type of model this is from its structure
+python -c "
+import torch
+model = torch.load('outputs/best_model.pt', map_location='cpu')
+print('Model type information:')
+for key in model.keys():
+    if 'P_' in key:
+        print('OSPA component found:', key)
+        break
+else:
+    print('Appears to be standard transformer (no P_ parameters found)')
+"
+
+# Run analysis on the best model
+python analyze_head_diversity.py \
+    --model_path outputs/best_model.pt \
+    --output_dir outputs/analysis/best_model \
+    --d_model 256 --nhead 4 --nlayers 3 \
+    --dim_feedforward 1024 \
+    --task lm \
+    --prefix best_model
+
+# Step 2: Run a few more essential training configurations for comparison
+echo "=========================================================="
+echo "Training vanilla transformer for comparison"
+echo "=========================================================="
+
+# Train a vanilla transformer for comparison
+python train_ospa.py \
+    --task lm \
+    --transformer_type vanilla \
+    --orth_mode init \
+    --d_model 256 --nhead 4 --nlayers 3 \
+    --dim_feedforward 1024 \
+    --epochs 10 \
+    --batch_size 64 \
+    --gradient_accumulation_steps 2 \
+    --lr 5e-4 \
+    --weight_decay 0.01 \
+    --clip 0.25 \
+    --bptt 35 \
+    --vocab_cutoff 30000 \
+    --log_interval 50 \
+    --scheduler_update_every_step \
+    --output_dir outputs/language_modeling \
+    --save lm_vanilla_init_seed42.pt \
+    --seed 42
+
+# Run with strict orthogonality
+echo "=========================================================="
+echo "Training OSPA with strict orthogonality"
+echo "=========================================================="
+
+python train_ospa.py \
+    --task lm \
+    --transformer_type ospa \
+    --orth_mode strict \
+    --d_model 256 --nhead 4 --nlayers 3 \
+    --dim_feedforward 1024 \
+    --epochs 10 \
+    --batch_size 64 \
+    --gradient_accumulation_steps 2 \
+    --lr 5e-4 \
+    --weight_decay 0.01 \
+    --clip 0.25 \
+    --bptt 35 \
+    --vocab_cutoff 30000 \
+    --log_interval 50 \
+    --scheduler_update_every_step \
+    --output_dir outputs/language_modeling \
+    --save lm_ospa_strict_seed42.pt \
+    --seed 42
+
+# Step 3: Comparative analysis
+echo "=========================================================="
+echo "Running comparative head diversity analysis"
+echo "=========================================================="
+
+# Create a list of available models (adjust these paths based on what training completed)
+MODELS=(
+    "outputs/best_model.pt"
+    "outputs/language_modeling/lm_vanilla_init_seed42.pt"
+    "outputs/language_modeling/lm_ospa_strict_seed42.pt"
+)
+
+# Check which models exist before analysis
+AVAILABLE_MODELS=""
+for model in "${MODELS[@]}"; do
+    if [ -f "$model" ]; then
+        echo "Found model: $model"
+        AVAILABLE_MODELS="$AVAILABLE_MODELS $model"
+    else
+        echo "Model not found: $model"
+    fi
 done
 
-# 2. OSPA with initialization only (no regularization)
-for seed in 42 43 44; do
-    run_experiment "lm" "ospa" "init" "0.0" $seed "outputs/language_modeling" "--scheduler_update_every_step"
+# Only run comparison if we have at least 2 models
+if [ "$(echo $AVAILABLE_MODELS | wc -w)" -ge 2 ]; then
+    echo "Running comparison on available models..."
+    python analyze_head_diversity.py --compare \
+        --model_paths $AVAILABLE_MODELS \
+        --output_dir outputs/analysis/model_comparison \
+        --d_model 256 --nhead 4 --nlayers 3 --dim_feedforward 1024
+else
+    echo "Not enough models for comparison. Skipping comparative analysis."
+fi
+
+# Step 4: Run a simple attention pattern visualization on a test sample
+echo "=========================================================="
+echo "Creating attention pattern visualizations"
+echo "=========================================================="
+
+# Create attention visualizations for one model (modify based on which model exists)
+for model in "${MODELS[@]}"; do
+    if [ -f "$model" ]; then
+        MODEL_NAME=$(basename "$model" .pt)
+        echo "Visualizing attention patterns for: $MODEL_NAME"
+        
+        # Create attention visualizations
+        python -c "
+import torch
+import matplotlib.pyplot as plt
+import seaborn as sns
+import os
+from improved_transformer_model import TransformerModel
+
+# Load model
+model_path = '$model'
+model = TransformerModel.load_from_checkpoint(model_path)
+model.eval()
+
+# Create small test input
+input_sequence = torch.randint(0, 1000, (30, 1))  # [seq_len, batch_size]
+model.store_attention_weights = True
+output = model(input_sequence)
+attention_weights = model.get_attention_weights()
+
+# Create output directory
+os.makedirs('outputs/analysis/attention_viz', exist_ok=True)
+
+# Visualize attention patterns for the first few heads
+for layer in range(min(3, attention_weights.shape[0])):
+    for head in range(min(4, attention_weights.shape[1])):
+        plt.figure(figsize=(8, 6))
+        sns.heatmap(
+            attention_weights[layer, head].cpu().numpy(),
+            cmap='viridis',
+            xticklabels=5,
+            yticklabels=5
+        )
+        plt.title(f'$MODEL_NAME - Layer {layer}, Head {head}')
+        plt.xlabel('Key position')
+        plt.ylabel('Query position')
+        plt.tight_layout()
+        plt.savefig(f'outputs/analysis/attention_viz/${MODEL_NAME}_layer{layer}_head{head}.png', dpi=300)
+        plt.close()
+print('Visualization complete')
+        "
+        break  # Just process one model for now
+    fi
 done
 
-# 3. OSPA with regularization (different lambda values)
-for lambda in 0.0001 0.001 0.01; do
-    for seed in 42 43 44; do
-        run_experiment "lm" "ospa" "regularize" $lambda $seed "outputs/language_modeling" "--scheduler_update_every_step"
-    done
-done
-
-# 4. OSPA with strict orthogonality
-for seed in 42 43 44; do
-    run_experiment "lm" "ospa" "strict" "0.0" $seed "outputs/language_modeling" "--scheduler_update_every_step"
-done
-
-# PART 2: Text Classification Experiments (IMDB)
-echo "============= TEXT CLASSIFICATION EXPERIMENTS ============="
-
-# 1. Vanilla Transformer Baseline (3 seeds)
-for seed in 42 43 44; do
-    run_experiment "classification" "vanilla" "init" "0.0" $seed "outputs/classification" ""
-done
-
-# 2. OSPA with initialization only
-for seed in 42 43 44; do
-    run_experiment "classification" "ospa" "init" "0.0" $seed "outputs/classification" ""
-done
-
-# 3. OSPA with regularization (different lambda values)
-for lambda in 0.0001 0.001 0.01; do
-    for seed in 42 43 44; do
-        run_experiment "classification" "ospa" "regularize" $lambda $seed "outputs/classification" ""
-    done
-done
-
-# 4. OSPA with strict orthogonality
-for seed in 42 43 44; do
-    run_experiment "classification" "ospa" "strict" "0.0" $seed "outputs/classification" ""
-done
-
-# Ablation Study: Effect of number of heads
-echo "============= ABLATION: NUMBER OF HEADS ============="
-for nhead in 2 4 8 16; do
-    run_experiment "lm" "ospa" "regularize" "0.001" 42 "outputs/language_modeling/ablation_heads" "--nhead ${nhead}"
-    run_experiment "lm" "vanilla" "init" "0.0" 42 "outputs/language_modeling/ablation_heads" "--nhead ${nhead}"
-done
-
-# Ablation Study: Model size
-echo "============= ABLATION: MODEL SIZE ============="
-for d_model in 128 256 512 768; do
-    dim_ff=$((d_model * 4))
-    run_experiment "lm" "ospa" "regularize" "0.001" 42 "outputs/language_modeling/ablation_size" "--d_model ${d_model} --dim_feedforward ${dim_ff}"
-    run_experiment "lm" "vanilla" "init" "0.0" 42 "outputs/language_modeling/ablation_size" "--d_model ${d_model} --dim_feedforward ${dim_ff}"
-done
-
-# Additional experiment: Analyze the best OSPA model for head diversity
-echo "============= ANALYZING HEAD DIVERSITY ============="
-# This command uses the saved model for analysis - you'll need to implement analysis script
-echo "This analysis step requires implementing a separate analysis script."
-echo "Example usage: python analyze_head_diversity.py --model_path outputs/language_modeling/lm_ospa_regularize_lambda0.001_seed42.pt"
-
-echo "All experiments completed at $(date)"
+echo "All analysis complete at $(date)"
