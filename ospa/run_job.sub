@@ -1,0 +1,141 @@
+#!/bin/bash
+#SBATCH --partition=rss-gpu
+#SBATCH -N 1
+#SBATCH -c 32
+#SBATCH --mem 100G
+#SBATCH --gres=gpu:A100:1
+#SBATCH --export=all
+#SBATCH --out=OSPA_Experiments-%j.out
+#SBATCH --output=ospa_output.%J_stdout.txt
+#SBATCH --error=ospa_error.%J_stderr.txt
+#SBATCH --time=100:00:00
+#SBATCH --job-name=OSPA_Experiments
+#SBATCH --mail-user=khurram.khalil@missouri.edu
+#SBATCH --mail-type=ALL
+
+# Load required modules
+module load miniconda3/4.10.3_gcc_9.5.0
+source activate deepseek
+
+# Create output directories
+mkdir -p outputs/language_modeling
+mkdir -p outputs/classification
+
+# Set common parameters
+COMMON_LM_PARAMS="--task lm --d_model 512 --nlayers 6 --nhead 8 --dim_feedforward 2048 --bptt 70 --vocab_cutoff 30000 --epochs 20 --batch_size 64 --gradient_accumulation_steps 2 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50"
+COMMON_CLS_PARAMS="--task classification --d_model 256 --nlayers 4 --nhead 4 --dim_feedforward 1024 --max_seq_len 512 --epochs 15 --batch_size 32 --gradient_accumulation_steps 1 --lr 2e-4 --weight_decay 0.01 --clip 0.5 --log_interval 25"
+
+# Function to run an experiment with given parameters
+run_experiment() {
+    local task=$1
+    local model_type=$2
+    local orth_mode=$3
+    local orth_weight=$4
+    local seed=$5
+    local output_dir=$6
+    local extra_params=$7
+    
+    local experiment_name="${task}_${model_type}_${orth_mode}"
+    if [ "$model_type" == "ospa" ] && [ "$orth_mode" == "regularize" ]; then
+        experiment_name="${experiment_name}_lambda${orth_weight}"
+    fi
+    experiment_name="${experiment_name}_seed${seed}"
+    
+    echo "=========================================================="
+    echo "Starting experiment: ${experiment_name}"
+    echo "=========================================================="
+    
+    if [ "$task" == "lm" ]; then
+        base_params=$COMMON_LM_PARAMS
+    else
+        base_params=$COMMON_CLS_PARAMS
+    fi
+    
+    # Build command
+    cmd="python train_ospa.py ${base_params} --transformer_type ${model_type} --orth_mode ${orth_mode} --orth_penalty_weight ${orth_weight} --seed ${seed} --output_dir ${output_dir} --save ${experiment_name}.pt ${extra_params}"
+    
+    echo "Running command: $cmd"
+    eval $cmd
+    
+    echo "Experiment ${experiment_name} completed."
+    echo "=========================================================="
+}
+
+# Log start time
+echo "Starting OSPA experiments at $(date)"
+echo "Running on host: $(hostname)"
+echo "CUDA devices: $CUDA_VISIBLE_DEVICES"
+echo "SLURM Job ID: $SLURM_JOB_ID"
+
+# PART 1: Language Modeling Experiments (WikiText-2)
+echo "============= LANGUAGE MODELING EXPERIMENTS ============="
+
+# 1. Vanilla Transformer Baseline (3 seeds)
+for seed in 42 43 44; do
+    run_experiment "lm" "vanilla" "init" "0.0" $seed "outputs/language_modeling" "--scheduler_update_every_step"
+done
+
+# 2. OSPA with initialization only (no regularization)
+for seed in 42 43 44; do
+    run_experiment "lm" "ospa" "init" "0.0" $seed "outputs/language_modeling" "--scheduler_update_every_step"
+done
+
+# 3. OSPA with regularization (different lambda values)
+for lambda in 0.0001 0.001 0.01; do
+    for seed in 42 43 44; do
+        run_experiment "lm" "ospa" "regularize" $lambda $seed "outputs/language_modeling" "--scheduler_update_every_step"
+    done
+done
+
+# 4. OSPA with strict orthogonality
+for seed in 42 43 44; do
+    run_experiment "lm" "ospa" "strict" "0.0" $seed "outputs/language_modeling" "--scheduler_update_every_step"
+done
+
+# PART 2: Text Classification Experiments (IMDB)
+echo "============= TEXT CLASSIFICATION EXPERIMENTS ============="
+
+# 1. Vanilla Transformer Baseline (3 seeds)
+for seed in 42 43 44; do
+    run_experiment "classification" "vanilla" "init" "0.0" $seed "outputs/classification" ""
+done
+
+# 2. OSPA with initialization only
+for seed in 42 43 44; do
+    run_experiment "classification" "ospa" "init" "0.0" $seed "outputs/classification" ""
+done
+
+# 3. OSPA with regularization (different lambda values)
+for lambda in 0.0001 0.001 0.01; do
+    for seed in 42 43 44; do
+        run_experiment "classification" "ospa" "regularize" $lambda $seed "outputs/classification" ""
+    done
+done
+
+# 4. OSPA with strict orthogonality
+for seed in 42 43 44; do
+    run_experiment "classification" "ospa" "strict" "0.0" $seed "outputs/classification" ""
+done
+
+# Ablation Study: Effect of number of heads
+echo "============= ABLATION: NUMBER OF HEADS ============="
+for nhead in 2 4 8 16; do
+    run_experiment "lm" "ospa" "regularize" "0.001" 42 "outputs/language_modeling/ablation_heads" "--nhead ${nhead}"
+    run_experiment "lm" "vanilla" "init" "0.0" 42 "outputs/language_modeling/ablation_heads" "--nhead ${nhead}"
+done
+
+# Ablation Study: Model size
+echo "============= ABLATION: MODEL SIZE ============="
+for d_model in 128 256 512 768; do
+    dim_ff=$((d_model * 4))
+    run_experiment "lm" "ospa" "regularize" "0.001" 42 "outputs/language_modeling/ablation_size" "--d_model ${d_model} --dim_feedforward ${dim_ff}"
+    run_experiment "lm" "vanilla" "init" "0.0" 42 "outputs/language_modeling/ablation_size" "--d_model ${d_model} --dim_feedforward ${dim_ff}"
+done
+
+# Additional experiment: Analyze the best OSPA model for head diversity
+echo "============= ANALYZING HEAD DIVERSITY ============="
+# This command uses the saved model for analysis - you'll need to implement analysis script
+echo "This analysis step requires implementing a separate analysis script."
+echo "Example usage: python analyze_head_diversity.py --model_path outputs/language_modeling/lm_ospa_regularize_lambda0.001_seed42.pt"
+
+echo "All experiments completed at $(date)"
