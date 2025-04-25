@@ -522,8 +522,8 @@ def train(args):
             if val_loss < best_val_loss:
                 best_val_loss = val_loss
             try:
-                torch.save(model.state_dict(), os.path.join(args.output_dir, args.save))
-                print(f'| Saving model to {os.path.join(args.output_dir, args.save)}')
+                torch.save(model.state_dict(), os.path.join(args.output, args.save))
+                print(f'| Saving model to {os.path.join(args.output, args.save)}')
             except RuntimeError as e:
                 print("[ERROR] Failed to save model due to:", e)
                 print("This likely means a CUDA assertion failed earlier.")
@@ -533,7 +533,7 @@ def train(args):
         print('| Keyboard interrupt - stopping training')
     
     # Load best model
-    model_path = os.path.join(args.output_dir, args.save)
+    model_path = os.path.join(args.output, args.save)
     if os.path.exists(model_path):
         model.load_state_dict(torch.load(model_path))
 
@@ -547,7 +547,7 @@ def train(args):
         print(f'| End of training | test loss {test_loss:5.2f} | test accuracy {test_acc:5.2f}%')
         history_data['test_loss'] = [test_loss, f'{math.exp(min(test_acc, 20)):8.2f}']
 
-    filepath = args.output_dir + ".json"
+    filepath = args.output + ".json"
     with open(filepath, 'w') as f:
         json.dump([history_data], f, indent=2)
 
