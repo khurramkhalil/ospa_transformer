@@ -772,7 +772,7 @@ if __name__ == "__main__":
     parser.add_argument('--max_seq_len', type=int, default=256, help='Maximum sequence length for classification padding/truncation (default: 256)')
 
     # Training Parameters
-    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs (default: 10)')
+    parser.add_argument('--epochs', type=int, default=100, help='Number of training epochs (default: 10)')
     parser.add_argument('--batch_size', type=int, default=32, help='Batch size per device (default: 32)')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1,
                         help='Number of steps to accumulate gradients before optimizer step (default: 1)')
