@@ -15,6 +15,111 @@ from datasets import load_dataset
 
 from improved_transformer_model import TransformerModel
 
+def generate_square_subsequent_mask(sz, device):
+    """Generates a square causal mask for language modeling."""
+    mask = torch.triu(torch.ones(sz, sz, device=device)) == 1
+    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+    return mask
+
+
+def train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args, epoch):
+    """Train a language model on WikiText-2 with causal masking."""
+    model.train()
+    total_loss = 0.0
+    start_time = time.time()
+    ntokens = len(vocab)
+
+    pbar = tqdm(range(0, train_data.size(0) - 1, args.bptt),
+                desc=f"Epoch {epoch}/{args.epochs}")
+
+    for batch, i in enumerate(pbar):
+        data, targets = get_batch(train_data, i, args.bptt)
+
+        # Clear gradients only at the beginning of accumulation steps
+        if batch % args.gradient_accumulation_steps == 0:
+            optimizer.zero_grad()
+
+        try:
+            seq_len = data.size(0)
+            src_mask = generate_square_subsequent_mask(seq_len, args.device)
+
+            # Forward pass with causal mask
+            output = model(data, src_mask=src_mask)
+
+            if torch.isnan(output).any() or torch.isinf(output).any():
+                print("WARNING: NaN or inf in model output. Skipping batch.")
+                continue
+
+            loss = criterion(output.view(-1, ntokens), targets)
+
+            if model.transformer_type == "ospa" and model.orth_mode == "regularize":
+                loss += args.orth_penalty_weight * model.get_orthogonality_penalty()
+
+            if args.gradient_accumulation_steps > 1:
+                loss = loss / args.gradient_accumulation_steps
+
+            loss.backward()
+
+            if (batch + 1) % args.gradient_accumulation_steps == 0 or (batch + 1) == len(pbar):
+                torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
+                optimizer.step()
+                if args.scheduler_update_every_step:
+                    scheduler.step()
+
+            total_loss += loss.item() * args.gradient_accumulation_steps
+
+            if batch % args.log_interval == 0 and batch > 0:
+                cur_loss = total_loss / args.log_interval
+                elapsed = time.time() - start_time
+                ppl = math.exp(min(cur_loss, 20))
+                pbar.set_postfix({
+                    'loss': f"{cur_loss:.2f}",
+                    'ppl': f"{ppl:.2f}",
+                    'ms/batch': f"{elapsed * 1000 / args.log_interval:.2f}"
+                })
+                total_loss = 0
+                start_time = time.time()
+
+        except RuntimeError as e:
+            print(f"ERROR: {e}\nSkipping problematic batch")
+            optimizer.zero_grad()
+            continue
+
+    if not args.scheduler_update_every_step:
+        scheduler.step()
+
+    val_loss = evaluate_language_model(model, val_data, vocab, get_batch, criterion, args)
+    print(f'| End of epoch {epoch:3d} | valid loss {val_loss:5.2f} | valid ppl {math.exp(min(val_loss, 20)):8.2f}')
+    return val_loss
+
+
+def evaluate_language_model(model, data, vocab, get_batch, criterion, args):
+    """Evaluate the language model using causal mask."""
+    model.eval()
+    total_loss = 0.0
+    ntokens = len(vocab)
+
+    with torch.no_grad():
+        for i in tqdm(range(0, data.size(0) - 1, args.bptt), desc="Evaluating"):
+            data_batch, targets = get_batch(data, i, args.bptt)
+            seq_len = data_batch.size(0)
+            src_mask = generate_square_subsequent_mask(seq_len, args.device)
+
+            try:
+                output = model(data_batch, src_mask=src_mask)
+                if torch.isnan(output).any() or torch.isinf(output).any():
+                    continue
+
+                loss = criterion(output.view(-1, ntokens), targets).item()
+                total_loss += loss * targets.size(0)
+
+            except RuntimeError as e:
+                print(f"Evaluation error: {e}")
+                continue
+
+    return total_loss / (data.size(0) - 1)
+
+
 def get_language_modeling_data(args):
     """Prepare data for language modeling task (WikiText-2) using datasets library."""
     from datasets import load_dataset
@@ -89,180 +194,6 @@ def get_language_modeling_data(args):
 
     return train_data, val_data, test_data, vocab, get_batch
 
-# Re-implementing for clarity if needed:
-def generate_square_subsequent_mask(sz, device):
-    """Generates a square causal mask for attending to previous tokens."""
-    mask = (torch.triu(torch.ones(sz, sz, device=device)) == 1).transpose(0, 1)
-    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-    return mask
-
-# --- Modified train_language_model ---
-def train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args, epoch):
-    """Train a language model on WikiText-2."""
-    model.train()
-    total_loss = 0.0
-    start_time = time.time()
-    ntokens = len(vocab)
-
-    # Use gradient accumulation if batch size is very large
-    effective_batch_size = args.batch_size * args.gradient_accumulation_steps
-
-    pbar = tqdm(range(0, train_data.size(0) - 1, args.bptt),
-               desc=f"Epoch {epoch}/{args.epochs}")
-
-    # Initialize mask - it might change size slightly at the end
-    src_mask = None
-
-    for batch, i in enumerate(pbar):
-        data, targets = get_batch(train_data, i, args.bptt)
-        seq_len = data.size(0) # Get actual sequence length for this batch
-
-        # Clear gradients only at the beginning of accumulation steps
-        if batch % args.gradient_accumulation_steps == 0:
-            optimizer.zero_grad()
-
-        try:
-            # --- MASK GENERATION ---
-            # Generate causal mask if not created or if seq_len changes
-            if src_mask is None or src_mask.size(0) != seq_len:
-                src_mask = generate_square_subsequent_mask(seq_len, args.device)
-            # ---------------------
-
-            # Forward pass - PASS THE MASK
-            output = model(data, src_mask=src_mask) # <--- Pass src_mask here
-
-            # Check for NaN or inf in output
-            if torch.isnan(output).any() or torch.isinf(output).any():
-                print(f"WARNING: NaN or inf in model output. Skipping batch.")
-                continue
-
-            # Safety check: are all targets in vocab?
-            if targets.max().item() >= ntokens or targets.min().item() < 0:
-                print(f"[ERROR] Invalid target indices detected:")
-                print(f"  → Max target: {targets.max().item()} (Vocab size: {ntokens})")
-                print(f"  → Min target: {targets.min().item()}")
-                print(f"  → Batch index: {batch}")
-                print("  → Sample target values:", targets[:20])
-                exit(1)
-
-            assert targets.max() < ntokens, f"Invalid target index {targets.max().item()} >= vocab size {ntokens}"
-
-            # Calculate loss
-            loss = criterion(output.view(-1, ntokens), targets) # Reshape was slightly off before
-
-            # Add orthogonality penalty if using OSPA with regularize mode
-            if model.transformer_type == "ospa" and model.orth_mode == "regularize":
-                orth_penalty = model.get_orthogonality_penalty()
-                loss = loss + args.orth_penalty_weight * orth_penalty
-
-            # Scale loss for gradient accumulation
-            if args.gradient_accumulation_steps > 1:
-                loss = loss / args.gradient_accumulation_steps
-
-            # Backward pass
-            loss.backward()
-
-            # Accumulate gradients for multiple steps
-            if (batch + 1) % args.gradient_accumulation_steps == 0 or (batch + 1) == len(pbar):
-                # Clip gradients
-                torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-
-                # Update weights
-                optimizer.step()
-
-                # Update scheduler
-                if args.scheduler_update_every_step:
-                    scheduler.step()
-
-            # Update metrics
-            total_loss += loss.item() * args.gradient_accumulation_steps
-
-            # Log progress
-            if batch % args.log_interval == 0 and batch > 0:
-                cur_loss = total_loss / args.log_interval
-                elapsed = time.time() - start_time
-
-                # Calculate perplexity safely
-                try:
-                    # Cap loss to prevent overflow
-                    safe_loss = min(cur_loss, 20)
-                    ppl = math.exp(safe_loss)
-                    ppl_str = f"{ppl:.2f}"
-                except OverflowError:
-                    ppl_str = "N/A"
-
-                pbar.set_postfix({
-                    'loss': f"{cur_loss:.2f}",
-                    'ppl': ppl_str,
-                    'ms/batch': f"{elapsed * 1000 / args.log_interval:.2f}"
-                })
-
-                total_loss = 0
-                start_time = time.time()
-
-        except RuntimeError as e:
-            print(f"ERROR: {e}")
-            if "CUDA out of memory" in str(e): # Handle OOM specifically if needed
-                 print("OOM error encountered. Try reducing batch size or model size.")
-                 # Potentially break or implement retry logic
-            print(f"Skipping problematic batch")
-            optimizer.zero_grad() # Ensure gradients are cleared if an error occurs mid-accumulation
-            continue
-
-    # Update learning rate scheduler at the end of epoch if not updated per step
-    if not args.scheduler_update_every_step:
-        scheduler.step()
-
-    # Validate after each epoch
-    val_loss = evaluate_language_model(model, val_data, vocab, get_batch, criterion, args) # Pass vocab
-    print(f'| End of epoch {epoch:3d} | valid loss {val_loss:5.2f} | valid ppl {math.exp(min(val_loss, 20)):8.2f}')
-
-    return val_loss
-
-
-# --- Modified evaluate_language_model ---
-def evaluate_language_model(model, data, vocab, get_batch, criterion, args):
-    """Evaluate a language model on validation or test data."""
-    model.eval()
-    total_loss = 0.0
-    ntokens = len(vocab)
-
-    # Initialize mask
-    src_mask = None
-
-    with torch.no_grad():
-        for i in tqdm(range(0, data.size(0) - 1, args.bptt),
-                     desc="Evaluating"):
-            data_batch, targets = get_batch(data, i, args.bptt)
-            seq_len = data_batch.size(0)
-
-            try:
-                # --- MASK GENERATION ---
-                if src_mask is None or src_mask.size(0) != seq_len:
-                    src_mask = generate_square_subsequent_mask(seq_len, args.device)
-                # ---------------------
-
-                # Forward pass - PASS THE MASK
-                output = model(data_batch, src_mask=src_mask) # <--- Pass src_mask here
-
-                # Skip batches with NaN or inf values
-                if torch.isnan(output).any() or torch.isinf(output).any():
-                    print(f"WARNING: NaN or inf in evaluation output. Skipping.")
-                    continue
-
-                loss = criterion(output.view(-1, ntokens), targets).item() # Reshape was slightly off
-                total_loss += loss * targets.size(0) # Use target size for accurate loss aggregation
-            except RuntimeError as e:
-                print(f"Evaluation error: {e}")
-                # Skip problematic batches during evaluation
-                continue
-
-    # Avoid division by zero if data size is less than bptt
-    num_evaluated_tokens = (data.size(0) - 1)
-    if num_evaluated_tokens == 0:
-        return float('inf') # Or handle appropriately
-
-    return total_loss / num_evaluated_tokens
 
 
 def get_classification_data(args):
@@ -350,184 +281,154 @@ def get_classification_data(args):
     
     return train_dataloader, test_dataloader, vocab
 
-# --- Modified train_classifier ---
-def train_classifier(model, train_dataloader, vocab, optimizer, criterion, scheduler, args, epoch): # Added vocab
+
+
+
+def train_classifier(model, train_dataloader, optimizer, criterion, scheduler, args, epoch):
     """Train a text classifier on IMDB."""
     model.train()
     total_loss = 0.0
     correct = 0
     total = 0
     start_time = time.time()
-
-    pad_idx = vocab['<pad>'] # Get padding index
-
+    
     pbar = tqdm(train_dataloader, desc=f"Epoch {epoch}/{args.epochs}")
     for batch_idx, (data, target) in enumerate(pbar):
-        data, target = data.to(args.device), target.to(args.device) #[seq_len, batch_size]
-
+        data, target = data.to(args.device), target.to(args.device)
+        
         # Clear gradients only at the beginning of accumulation steps
         if batch_idx % args.gradient_accumulation_steps == 0:
             optimizer.zero_grad()
-
+        
         try:
-            # --- MASK GENERATION ---
-            # Create padding mask: True where pads are, False elsewhere
-            # Shape: [batch_size, seq_len]
-            src_key_padding_mask = (data == pad_idx).transpose(0, 1)
-            # ---------------------
-
-            # Forward pass - PASS THE MASK
-            output = model(data, src_key_padding_mask=src_key_padding_mask) # <--- Pass padding mask here
-
+            # Forward pass
+            output = model(data)
+            
             # Check for NaN or inf in output
             if torch.isnan(output).any() or torch.isinf(output).any():
                 print(f"WARNING: NaN or inf in model output. Skipping batch.")
                 continue
-
+                
             # Calculate loss
             loss = criterion(output, target)
-
+            
             # Add orthogonality penalty if using OSPA with regularize mode
             if model.transformer_type == "ospa" and model.orth_mode == "regularize":
                 orth_penalty = model.get_orthogonality_penalty()
                 loss = loss + args.orth_penalty_weight * orth_penalty
-
+            
             # Scale loss for gradient accumulation
             if args.gradient_accumulation_steps > 1:
                 loss = loss / args.gradient_accumulation_steps
-
+                
             # Backward pass
             loss.backward()
-
+            
             # Accumulate gradients for multiple steps
             if (batch_idx + 1) % args.gradient_accumulation_steps == 0 or (batch_idx + 1) == len(pbar):
                 # Clip gradients
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
-
+                
                 # Update weights
                 optimizer.step()
-
+                
                 # Update scheduler
                 if args.scheduler_update_every_step:
                     scheduler.step()
-
+            
             # Calculate accuracy
             pred = output.argmax(dim=1)
             batch_correct = (pred == target).sum().item()
             batch_total = target.size(0)
-
+            
             correct += batch_correct
             total += batch_total
-
+            
             # Update metrics
             total_loss += loss.item() * args.gradient_accumulation_steps
-
+            
             # Update progress bar
             pbar.set_postfix({
                 'loss': f"{loss.item():.4f}",
                 'acc': f"{batch_correct/batch_total:.4f}"
             })
-
+            
         except RuntimeError as e:
             print(f"ERROR: {e}")
-            if "CUDA out of memory" in str(e): # Handle OOM specifically if needed
-                 print("OOM error encountered. Try reducing batch size or model size.")
             print(f"Skipping problematic batch")
-            optimizer.zero_grad() # Ensure gradients are cleared if an error occurs mid-accumulation
+            optimizer.zero_grad()
             continue
-
+    
     # Update learning rate scheduler at the end of epoch if not updated per step
     if not args.scheduler_update_every_step:
         scheduler.step()
-
-    avg_loss = total_loss / len(train_dataloader) if len(train_dataloader) > 0 else float('inf')
-    avg_acc = correct / total if total > 0 else 0.0
-
+    
+    avg_loss = total_loss / len(train_dataloader)
+    avg_acc = correct / total
+    
     return avg_loss, avg_acc
 
 
-# --- Modified evaluate_classifier ---
-def evaluate_classifier(model, test_dataloader, vocab, criterion, args): # Added vocab
+def evaluate_classifier(model, test_dataloader, criterion, args):
     """Evaluate a text classifier on test data."""
     model.eval()
     total_loss = 0.0
     correct = 0
     total = 0
-
-    pad_idx = vocab['<pad>'] # Get padding index
-
+    
     with torch.no_grad():
         for data, target in tqdm(test_dataloader, desc="Evaluating"):
-            data, target = data.to(args.device), target.to(args.device) # [seq_len, batch_size]
-
+            data, target = data.to(args.device), target.to(args.device)
+            
             try:
-                # --- MASK GENERATION ---
-                src_key_padding_mask = (data == pad_idx).transpose(0, 1) # [batch_size, seq_len]
-                # ---------------------
-
-                # Forward pass - PASS THE MASK
-                output = model(data, src_key_padding_mask=src_key_padding_mask) # <--- Pass padding mask here
-
+                # Forward pass
+                output = model(data)
+                
                 # Skip batches with NaN or inf values
                 if torch.isnan(output).any() or torch.isinf(output).any():
-                     print(f"WARNING: NaN or inf in evaluation output. Skipping.")
-                     continue
-
+                    continue
+                    
                 # Calculate loss
                 loss = criterion(output, target)
-                total_loss += loss.item() * target.size(0) # Use target size for accurate aggregation
-
+                total_loss += loss.item() * target.size(0)
+                
                 # Calculate accuracy
                 pred = output.argmax(dim=1)
                 correct += (pred == target).sum().item()
                 total += target.size(0)
-
-            except RuntimeError as e:
-                print(f"Evaluation error: {e}")
-                # Skip problematic batches during evaluation
+                
+            except RuntimeError:
+                # Skip problematic batches
                 continue
-
+    
     # Print test results
     test_loss = total_loss / total if total > 0 else float('inf')
     test_acc = 100 * correct / total if total > 0 else 0
     print(f'| Test loss {test_loss:.2f} | Test accuracy {test_acc:.2f}%')
-
+    
     return test_loss, test_acc
 
-# --- Modified train function signature calls ---
+
 def train(args):
     """Main training function."""
-    # --- SET SEED ---
-    np.random.seed(args.seed)
-    torch.manual_seed(args.seed)
-    if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(args.seed)
-    # ----------------------------
-
     # Create output directory
-    os.makedirs(args.output_dir, exist_ok=True) # Changed from args.output to args.output_dir
-
+    os.makedirs(args.output_dir, exist_ok=True)
+    
     # Print device info
     print(f"Using device: {args.device}")
-
+    
     # Set up data
     if args.task == 'lm':
         print("Loading language modeling data...")
         train_data, val_data, test_data, vocab, get_batch = get_language_modeling_data(args)
         ntokens = len(vocab)
-        criterion = nn.CrossEntropyLoss() # Default ignore_index=-100 might be fine if no padding here
+        criterion = nn.CrossEntropyLoss()
     else:  # classification
         print("Loading classification data...")
         train_dataloader, test_dataloader, vocab = get_classification_data(args)
         ntokens = len(vocab)
-        pad_idx = vocab['<pad>']
-        criterion = nn.CrossEntropyLoss(ignore_index=pad_idx) # Ignore padding index in loss
-        # Note: You might NOT want to ignore padding if your model output is only based on [CLS] or first token
-        # Since your model uses output[0], ignoring padding in the loss is likely NOT necessary
-        # Revert to: criterion = nn.CrossEntropyLoss() # IF output is only based on first token repr.
-        # Let's keep it simple for now, assuming the target `criterion(output, target)` doesn't see padding:
         criterion = nn.CrossEntropyLoss()
-
+    
     # Create model
     print("Creating model...")
     model = TransformerModel(
@@ -543,8 +444,8 @@ def train(args):
         task=args.task
     ).to(args.device)
 
-    print("Model output dim:", model.output_layer.out_features if hasattr(model, 'output_layer') else 'N/A', "| Vocab size:", ntokens)
-
+    print("Model output dim:", model.output_layer.out_features, "| Vocab size:", ntokens)
+    
     # Set up optimizer and scheduler
     print("Setting up optimizer and scheduler...")
     optimizer = optim.AdamW(
@@ -552,120 +453,76 @@ def train(args):
         lr=args.lr,
         weight_decay=args.weight_decay
     )
-
+    
     # Use Cosine Annealing scheduler
-    if args.task == 'lm':
-        num_batches = len(range(0, train_data.size(0) - 1, args.bptt))
-    else:
-        num_batches = len(train_dataloader)
     scheduler = CosineAnnealingLR(
         optimizer,
-        T_max=args.epochs * (num_batches // args.gradient_accumulation_steps),
-        eta_min=args.lr / 100 # Avoid eta_min=0
+        T_max=args.epochs * (len(train_data) // args.bptt // args.gradient_accumulation_steps if args.task == 'lm' 
+                            else len(train_dataloader) // args.gradient_accumulation_steps),
+        eta_min=args.lr / 100
     )
-
+    
     # Print model info
     print(f"Model: {args.transformer_type.upper()} Transformer")
     print(f"Parameters: {sum(p.numel() for p in model.parameters())/1000000:.2f}M")
     print(f"Orthogonality Mode: {args.orth_mode}")
     if args.orth_mode == 'regularize':
         print(f"Orthogonality Penalty Weight: {args.orth_penalty_weight}")
-
+    
     # Training loop
-    best_val_metric = float('inf') # Use loss for LM, maybe -accuracy for classification? Let's stick to loss.
-    history_data = {'train_loss': [], 'train_acc': [], 'val_loss': [], 'val_acc': []} # More structured history
-
-
+    best_val_loss = float('inf')
+    history_data = {}
+    
     try:
         for epoch in range(1, args.epochs + 1):
-            epoch_start_time = time.time() # Time epochs
-            print(f"\n--- Epoch {epoch}/{args.epochs} ---")
-
+            print(f"\nEpoch {epoch}/{args.epochs}")
+            
             # Train for one epoch
             if args.task == 'lm':
-                train_loss = train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args, epoch) # This function doesn't return train loss currently
+                train_language_model(model, train_data, val_data, vocab, get_batch, optimizer, criterion, scheduler, args, epoch)
                 val_loss = evaluate_language_model(model, val_data, vocab, get_batch, criterion, args)
-                print(f'| Epoch {epoch} Time: {time.time() - epoch_start_time:.2f}s | Valid Loss: {val_loss:5.2f} | Valid PPL: {math.exp(min(val_loss, 700)):8.2f}') # Cap PPL exponent
-                current_metric = val_loss
-                history_data['val_loss'].append(val_loss)
-
             else:  # classification
-                train_loss, train_acc = train_classifier(model, train_dataloader, vocab, optimizer, criterion, scheduler, args, epoch) # Pass vocab
-                print(f'| Epoch {epoch} Time: {time.time() - epoch_start_time:.2f}s | Train Loss: {train_loss:.3f} | Train Acc: {train_acc*100:.2f}%')
-                val_loss, val_acc = evaluate_classifier(model, test_dataloader, vocab, criterion, args) # Pass vocab
-                # Use test set as validation here - common for IMDB, but consider a separate val split ideally
-                print(f'| Epoch {epoch} Evaluation | Valid Loss: {val_loss:.3f} | Valid Acc: {val_acc:.2f}%')
-                current_metric = val_loss # Or use -val_acc if optimizing for accuracy
-                history_data['train_loss'].append(train_loss)
-                history_data['train_acc'].append(train_acc)
-                history_data['val_loss'].append(val_loss)
-                history_data['val_acc'].append(val_acc)
-
-
-            # Save model if validation metric improved
-            if current_metric < best_val_metric:
-                best_val_metric = current_metric
-                save_path = os.path.join(args.output_dir, args.save) # Use output_dir
-                try:
-                    torch.save(model.state_dict(), save_path)
-                    print(f'| Model saved to {save_path} (Validation Metric: {best_val_metric:.4f})')
-                except Exception as e: # Catch broader exceptions
-                    print(f"[ERROR] Failed to save model due to: {e}")
-                    # Decide whether to exit or continue
-                    # exit(1)
+                train_classifier(model, train_dataloader, optimizer, criterion, scheduler, args, epoch)
+                val_loss, _ = evaluate_classifier(model, test_dataloader, criterion, args)
+            
+            history_data[epoch] = [val_loss, f'{math.exp(min(val_loss, 20)):8.2f}']
+            
+            # Save model if validation loss improved
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+            try:
+                torch.save(model.state_dict(), os.path.join(args.output, args.save))
+                print(f'| Saving model to {os.path.join(args.output, args.save)}')
+            except RuntimeError as e:
+                print("[ERROR] Failed to save model due to:", e)
+                print("This likely means a CUDA assertion failed earlier.")
+                exit(1)
 
     except KeyboardInterrupt:
-        print('-' * 89)
-        print('| Keyboard interrupt detected - Exiting training early')
-        print('-' * 89)
-
-    # --- Load BEST model for final evaluation ---
-    # Construct filename using args for uniqueness
-    output_filename = f"{args.task}_{args.transformer_type}_{args.orth_mode}_lambda{args.orth_penalty_weight if args.orth_mode == 'regularize' else 0}_d{args.d_model}_h{args.nhead}_l{args.nlayers}.json"
-    model_path = os.path.join(args.output_dir, args.save) # Use output_dir
+        print('| Keyboard interrupt - stopping training')
+    
+    # Load best model
+    model_path = os.path.join(args.output, args.save)
     if os.path.exists(model_path):
-        try:
-            print(f"Loading best model from {model_path} for final evaluation...")
-            model.load_state_dict(torch.load(model_path, map_location=args.device))
-            torch.save(model.state_dict(), model_path)
-        except Exception as e:
-            print(f"[ERROR] Failed to load best model from {model_path}: {e}")
-            print("Proceeding with the current model state for final evaluation.")
-    else:
-        print("[Warning] No saved model found. Evaluating with the final model state.")
-
+        model.load_state_dict(torch.load(model_path))
 
     # Final evaluation
-    print("\n--- Final Evaluation ---")
     if args.task == 'lm':
-        test_loss = evaluate_language_model(model, test_data, vocab, get_batch, criterion, args) # Pass vocab
-        print(f'=' * 89)
-        print(f'| End of training | Test Loss {test_loss:5.2f} | Test PPL {math.exp(min(test_loss, 700)):8.2f}') # Cap PPL exponent
-        print(f'=' * 89)
-        history_data['test_loss'] = test_loss
-        history_data['test_ppl'] = math.exp(min(test_loss, 700))
+        test_loss = evaluate_language_model(model, test_data, vocab, get_batch, criterion, args)
+        print(f'| End of training | test loss {test_loss:5.2f} | test ppl {math.exp(min(test_loss, 20)):8.2f}')
+        history_data['test_loss'] = [test_loss, f'{math.exp(min(test_loss, 20)):8.2f}']
     else:  # classification
-        # Re-evaluate on the test set using the loaded best model
-        test_loss, test_acc = evaluate_classifier(model, test_dataloader, vocab, criterion, args) # Pass vocab
-        print(f'=' * 89)
-        print(f'| End of training | Test Loss {test_loss:5.2f} | Test Accuracy {test_acc:5.2f}%')
-        print(f'=' * 89)
-        history_data['test_loss'] = test_loss
-        history_data['test_acc'] = test_acc
+        test_loss, test_acc = evaluate_classifier(model, test_dataloader, criterion, args)
+        print(f'| End of training | test loss {test_loss:5.2f} | test accuracy {test_acc:5.2f}%')
+        history_data['test_loss'] = [test_loss, f'{math.exp(min(test_acc, 20)):8.2f}']
 
-    # --- Corrected JSON saving ---
-    filepath = os.path.join(args.output_dir, output_filename)
-    print(f"Saving results history to: {filepath}")
-    try:
-        with open(filepath, 'w') as f:
-            json.dump(history_data, f, indent=2) # Save history_data directly
-    except Exception as e:
-        print(f"[ERROR] Failed to save results JSON: {e}")
+    filepath = args.output + ".json"
+    with open(filepath, 'w') as f:
+        json.dump([history_data], f, indent=2)
 
-# --- Main execution block ---
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Orthogonal Subspace Projection Attention')
-
+    
     # Model configuration
     parser.add_argument('--transformer_type', type=str, default='ospa', choices=['ospa', 'vanilla', 'linformer'],
                         help='Type of transformer architecture')
@@ -675,36 +532,34 @@ if __name__ == "__main__":
     parser.add_argument('--nhead', type=int, default=4, help='Number of attention heads')
     parser.add_argument('--nlayers', type=int, default=3, help='Number of transformer layers')
     parser.add_argument('--dim_feedforward', type=int, default=1024, help='Dimension of feedforward network')
-
+    
     # Orthogonality parameters
-    parser.add_argument('--orth_mode', type=str, default='regularize', choices=['init', 'regularize', 'strict'], # Changed default
+    parser.add_argument('--orth_mode', type=str, default='init', choices=['init', 'regularize', 'strict'],
                         help='How to enforce orthogonality')
-    parser.add_argument('--orth_penalty_weight', type=float, default=0.0001, # Changed default based on IWSLT results
+    parser.add_argument('--orth_penalty_weight', type=float, default=0.001, 
                         help='Weight for orthogonality penalty (used in regularize mode)')
-
+    
     # Training parameters
-    parser.add_argument('--batch_size', type=int, default=32, help='Batch size') # Slightly increased default
+    parser.add_argument('--batch_size', type=int, default=16, help='Batch size')
     parser.add_argument('--bptt', type=int, default=35, help='Sequence length for language modeling')
     parser.add_argument('--max_seq_len', type=int, default=256, help='Max sequence length for classification')
-    parser.add_argument('--dropout', type=float, default=0.1, help='Dropout rate') # Reduced default
-    parser.add_argument('--epochs', type=int, default=10, help='Number of training epochs') # Reduced default for quicker tests
+    parser.add_argument('--dropout', type=float, default=0.2, help='Dropout rate')
+    parser.add_argument('--epochs', type=int, default=20, help='Number of training epochs')
     parser.add_argument('--lr', type=float, default=5e-4, help='Initial learning rate')
     parser.add_argument('--clip', type=float, default=1.0, help='Gradient clipping value')
     parser.add_argument('--weight_decay', type=float, default=0.01, help='Weight decay')
     parser.add_argument('--gradient_accumulation_steps', type=int, default=1, help='Steps for gradient accumulation')
     parser.add_argument('--scheduler_update_every_step', action='store_true', help='Update scheduler every step')
     parser.add_argument('--vocab_cutoff', type=int, default=10000, help='Limit vocabulary size (0 for no limit)')
-    parser.add_argument('--log_interval', type=int, default=100, help='Report interval') # Reduced default
-    parser.add_argument('--save', type=str, default='best_model.pt', help='Model save filename') # Changed default
-    parser.add_argument('--output_dir', type=str, default='outputs', help='Output directory for models and results')
+    parser.add_argument('--log_interval', type=int, default=200, help='Report interval')
+    parser.add_argument('--save', type=str, default='model.pt', help='Model save filename')
+    parser.add_argument('--output_dir', type=str, default='outputs', help='Output directory')
     parser.add_argument('--device', type=str, default='cuda' if torch.cuda.is_available() else 'cpu', help='Device')
     parser.add_argument('--num_workers', type=int, default=2, help='Data loader workers')
     parser.add_argument('--seed', type=int, default=42, help='Random seed')
 
     args = parser.parse_args()
-
-    # --- Removed automatic output filename generation ---
-    # We now generate filename before saving JSON
-    # args.output = ... (removed)
-
+    args.output = str(args.task) + "_" + \
+        str(args.orth_mode)  + "_" + str(args.orth_penalty_weight) + "_" +str(args.d_model)  + \
+            "_" + str(args.nhead) + "_" + str(args.nlayers) + "_" + str(args.dim_feedforward)
     train(args)
