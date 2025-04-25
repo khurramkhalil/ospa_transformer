@@ -148,4 +148,4 @@ class OrthogonalLinear(nn.Module):
         else:
             prod = self.weight.t() @ self.weight
             identity = torch.eye(self.in_features, device=self.weight.device)
-        return torch.norm(prod - identity, p='fro')
+        return torch.norm(prod - identity, p='fro').pow(2)
