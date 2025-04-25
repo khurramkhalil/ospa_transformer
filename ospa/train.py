@@ -221,7 +221,7 @@ def get_classification_data(args):
 
 # Training and Evaluation Functions
 
-def train_language_model(model, train_data, optimizer, criterion, scheduler, args, epoch):
+def train_language_model(model, train_data, optimizer, criterion, scheduler, args, epoch, get_batch_func):
     """Train a language model on WikiText-2 with causal masking."""
     model.train()
     total_loss = 0.0
@@ -233,7 +233,7 @@ def train_language_model(model, train_data, optimizer, criterion, scheduler, arg
 
     for batch, i in enumerate(pbar):
         # Use the get_batch function defined in get_language_modeling_data
-        data, targets = get_batch(train_data, i, args.bptt) # Fetches from global scope - okay here
+        data, targets = get_batch_func(train_data, i, args.bptt)
         seq_len = data.size(0) # Get actual sequence length
 
         # Clear gradients only at the beginning of accumulation steps
@@ -637,7 +637,7 @@ def train(args):
 
             # --- Training Step ---
             if args.task == 'lm':
-                train_language_model(model, train_data, optimizer, criterion, scheduler, args, epoch)
+                train_language_model(model, train_data, optimizer, criterion, scheduler, args, epoch, get_batch_func)
                 # We don't capture train loss directly from the function currently
                 epoch_history['train_loss'] = None # Placeholder
             else: # classification
