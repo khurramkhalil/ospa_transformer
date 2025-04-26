@@ -762,4 +762,4 @@ def compare_models(args_list, output_dir):
     plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
     plt.title('Normalized Metrics Comparison (Higher is Better)')
     plt.tight_layout()
-    plt.
+    plt.show()
