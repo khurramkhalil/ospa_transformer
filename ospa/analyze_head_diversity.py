@@ -762,4 +762,18 @@ def compare_models(args_list, output_dir):
     plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
     plt.title('Normalized Metrics Comparison (Higher is Better)')
     plt.tight_layout()
-    plt.show()
+    plt.savefig(os.path.join(output_dir, "radar_metrics_comparison.png"), dpi=300)
+    plt.close()
+    
+    # Save comparison metrics to JSON
+    comparison_results = {
+        'models': model_names,
+        'metrics': {
+            metric: [m[metric] for m in all_metrics] for metric in metrics_to_compare
+        }
+    }
+    
+    with open(os.path.join(output_dir, "diversity_comparison_metrics.json"), 'w') as f:
+        json.dump(comparison_results, f, indent=2)
+    
+    print(f"Model comparison complete. Results saved to {output_dir}")
