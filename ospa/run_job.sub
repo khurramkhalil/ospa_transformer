@@ -3,13 +3,13 @@
 #SBATCH -N 1
 #SBATCH -c 60
 #SBATCH --mem 0G
-#SBATCH --gres=gpu:A100:4
+#SBATCH --gres=gpu:A100:1
 #SBATCH --export=all
-#SBATCH --out=OSPA_Analysis-%j.out
-#SBATCH --output=ospa_analysis.%J_stdout.txt
-#SBATCH --error=ospa_analysis.%J_stderr.txt
-#SBATCH --time=100:00:00
-#SBATCH --job-name=OSPA_Analysis
+#SBATCH --out=OSPA_Final_Analysis-%j.out
+#SBATCH --output=ospa_final.%J_stdout.txt
+#SBATCH --error=ospa_final.%J_stderr.txt
+#SBATCH --time=24:00:00
+#SBATCH --job-name=OSPA_Final
 #SBATCH --mail-user=khurram.khalil@missouri.edu
 #SBATCH --mail-type=ALL
 
@@ -17,179 +17,174 @@
 module load miniconda3/4.10.3_gcc_9.5.0
 source activate deepseek
 
-echo "Starting OSPA analysis job at $(date)"
+echo "Starting OSPA final analysis job at $(date)"
 echo "Running on host: $(hostname)"
 echo "CUDA devices: $CUDA_VISIBLE_DEVICES"
 echo "SLURM Job ID: $SLURM_JOB_ID"
 
-# Create analysis directory
+# Create all required directories in advance
+echo "Creating all required directories..."
+mkdir -p outputs
+mkdir -p outputs/vanilla_model
+mkdir -p outputs/ospa_model
 mkdir -p outputs/analysis
 
-# Step 1: Analyze existing best_model.pt
-echo "=========================================================="
-echo "Analyzing existing best model"
-echo "=========================================================="
+# Check existing files and directories
+echo "Current output directories:"
+ls -la outputs/
 
-# First, determine what type of model this is from its structure
-python -c "
-import torch
-model = torch.load('outputs/best_model.pt', map_location='cpu')
-print('Model type information:')
-for key in model.keys():
-    if 'P_' in key:
-        print('OSPA component found:', key)
-        break
-else:
-    print('Appears to be standard transformer (no P_ parameters found)')
-"
-
-# Run analysis on the best model
-python analyze_head_diversity.py \
-    --model_path outputs/best_model.pt \
-    --output_dir outputs/analysis/best_model \
-    --d_model 256 --nhead 4 --nlayers 3 \
-    --dim_feedforward 1024 \
-    --task lm \
-    --prefix best_model
-
-# Step 2: Run a few more essential training configurations for comparison
-echo "=========================================================="
-echo "Training vanilla transformer for comparison"
-echo "=========================================================="
-
-# Train a vanilla transformer for comparison
+# Step 1: Train vanilla model with explicit output directory
+echo "=========================="
+echo "Training vanilla model..."
+echo "=========================="
 python train_ospa.py \
     --task lm \
     --transformer_type vanilla \
     --orth_mode init \
     --d_model 256 --nhead 4 --nlayers 3 \
     --dim_feedforward 1024 \
-    --epochs 10 \
-    --batch_size 64 \
-    --gradient_accumulation_steps 2 \
+    --epochs 5 \
+    --batch_size 32 \
     --lr 5e-4 \
     --weight_decay 0.01 \
     --clip 0.25 \
     --bptt 35 \
-    --vocab_cutoff 30000 \
+    --vocab_cutoff 10000 \
     --log_interval 50 \
-    --scheduler_update_every_step \
-    --output_dir outputs/language_modeling \
-    --save lm_vanilla_init_seed42.pt \
+    --output_dir outputs/vanilla_model \
+    --save model.pt \
     --seed 42
 
-# Run with strict orthogonality
-echo "=========================================================="
-echo "Training OSPA with strict orthogonality"
-echo "=========================================================="
+# Check if vanilla model was created
+if [ -f "outputs/vanilla_model/model.pt" ]; then
+    echo "✓ Vanilla model training completed successfully"
+else
+    echo "✗ ERROR: Vanilla model training failed"
+    # Continue anyway to try OSPA model
+fi
 
+# Step 2: Train OSPA model with explicit output directory
+echo "=========================="
+echo "Training OSPA model..."
+echo "=========================="
 python train_ospa.py \
     --task lm \
     --transformer_type ospa \
-    --orth_mode strict \
+    --orth_mode regularize \
+    --orth_penalty_weight 0.001 \
     --d_model 256 --nhead 4 --nlayers 3 \
     --dim_feedforward 1024 \
-    --epochs 10 \
-    --batch_size 64 \
-    --gradient_accumulation_steps 2 \
+    --epochs 5 \
+    --batch_size 32 \
     --lr 5e-4 \
     --weight_decay 0.01 \
     --clip 0.25 \
     --bptt 35 \
-    --vocab_cutoff 30000 \
+    --vocab_cutoff 10000 \
     --log_interval 50 \
-    --scheduler_update_every_step \
-    --output_dir outputs/language_modeling \
-    --save lm_ospa_strict_seed42.pt \
+    --output_dir outputs/ospa_model \
+    --save model.pt \
     --seed 42
 
-# Step 3: Comparative analysis
-echo "=========================================================="
-echo "Running comparative head diversity analysis"
-echo "=========================================================="
-
-# Create a list of available models (adjust these paths based on what training completed)
-MODELS=(
-    "outputs/best_model.pt"
-    "outputs/language_modeling/lm_vanilla_init_seed42.pt"
-    "outputs/language_modeling/lm_ospa_strict_seed42.pt"
-)
-
-# Check which models exist before analysis
-AVAILABLE_MODELS=""
-for model in "${MODELS[@]}"; do
-    if [ -f "$model" ]; then
-        echo "Found model: $model"
-        AVAILABLE_MODELS="$AVAILABLE_MODELS $model"
-    else
-        echo "Model not found: $model"
-    fi
-done
-
-# Only run comparison if we have at least 2 models
-if [ "$(echo $AVAILABLE_MODELS | wc -w)" -ge 2 ]; then
-    echo "Running comparison on available models..."
-    python analyze_head_diversity.py --compare \
-        --model_paths $AVAILABLE_MODELS \
-        --output_dir outputs/analysis/model_comparison \
-        --d_model 256 --nhead 4 --nlayers 3 --dim_feedforward 1024
+# Check if OSPA model was created
+if [ -f "outputs/ospa_model/model.pt" ]; then
+    echo "✓ OSPA model training completed successfully"
 else
-    echo "Not enough models for comparison. Skipping comparative analysis."
+    echo "✗ ERROR: OSPA model training failed"
+    # Continue anyway to try analysis on whatever models we have
 fi
 
-# Step 4: Run a simple attention pattern visualization on a test sample
-echo "=========================================================="
-echo "Creating attention pattern visualizations"
-echo "=========================================================="
+# Step 3: List all available models for analysis
+echo "=========================="
+echo "Available models for analysis:"
+echo "=========================="
+find outputs/ -name "*.pt" -type f
 
-# Create attention visualizations for one model (modify based on which model exists)
-for model in "${MODELS[@]}"; do
-    if [ -f "$model" ]; then
-        MODEL_NAME=$(basename "$model" .pt)
-        echo "Visualizing attention patterns for: $MODEL_NAME"
+# Step 4: Run analysis on individual models 
+echo "=========================="
+echo "Running individual model analyses..."
+echo "=========================="
+
+# Function to analyze a model if it exists
+analyze_model() {
+    model_path=$1
+    model_name=$2
+    
+    if [ -f "$model_path" ]; then
+        echo "Analyzing model: $model_name"
         
-        # Create attention visualizations
-        python -c "
-import torch
-import matplotlib.pyplot as plt
-import seaborn as sns
-import os
-from improved_transformer_model import TransformerModel
-
-# Load model
-model_path = '$model'
-model = TransformerModel.load_from_checkpoint(model_path)
-model.eval()
-
-# Create small test input
-input_sequence = torch.randint(0, 1000, (30, 1))  # [seq_len, batch_size]
-model.store_attention_weights = True
-output = model(input_sequence)
-attention_weights = model.get_attention_weights()
-
-# Create output directory
-os.makedirs('outputs/analysis/attention_viz', exist_ok=True)
-
-# Visualize attention patterns for the first few heads
-for layer in range(min(3, attention_weights.shape[0])):
-    for head in range(min(4, attention_weights.shape[1])):
-        plt.figure(figsize=(8, 6))
-        sns.heatmap(
-            attention_weights[layer, head].cpu().numpy(),
-            cmap='viridis',
-            xticklabels=5,
-            yticklabels=5
-        )
-        plt.title(f'$MODEL_NAME - Layer {layer}, Head {head}')
-        plt.xlabel('Key position')
-        plt.ylabel('Query position')
-        plt.tight_layout()
-        plt.savefig(f'outputs/analysis/attention_viz/${MODEL_NAME}_layer{layer}_head{head}.png', dpi=300)
-        plt.close()
-print('Visualization complete')
-        "
-        break  # Just process one model for now
+        # Make output directory
+        mkdir -p "outputs/analysis/$model_name"
+        
+        # Run analysis
+        python analyze_head_diversity.py \
+            --model_path "$model_path" \
+            --output_dir "outputs/analysis/$model_name" \
+            --d_model 256 --nhead 4 --nlayers 3 \
+            --dim_feedforward 1024 \
+            --task lm \
+            --prefix "$model_name" \
+            --device cpu
+            
+        if [ $? -eq 0 ]; then
+            echo "✓ Analysis completed for $model_name"
+        else
+            echo "✗ Analysis failed for $model_name"
+        fi
+    else
+        echo "✗ Model not found: $model_path"
     fi
-done
+}
 
-echo "All analysis complete at $(date)"
+# Analyze vanilla model
+analyze_model "outputs/vanilla_model/model.pt" "vanilla"
+
+# Analyze OSPA model
+analyze_model "outputs/ospa_model/model.pt" "ospa"
+
+# Also try to analyze our original best_model if it exists
+analyze_model "outputs/best_model.pt" "best_model"
+
+# Step 5: Compare models if we have at least two
+echo "=========================="
+echo "Running model comparison if possible..."
+echo "=========================="
+
+# Get list of available models
+available_models=$(find outputs/ -name "*.pt" -type f)
+model_count=$(echo "$available_models" | wc -l)
+
+if [ "$model_count" -ge 2 ]; then
+    echo "Found $model_count models. Running comparison."
+    
+    # Convert newline-separated list to space-separated for command line
+    model_paths=$(echo "$available_models" | tr '\n' ' ')
+    
+    # Create comparison directory
+    mkdir -p outputs/analysis/comparison
+    
+    # Run comparison
+    python analyze_head_diversity.py --compare \
+        --model_paths $model_paths \
+        --output_dir outputs/analysis/comparison \
+        --d_model 256 --nhead 4 --nlayers 3 \
+        --dim_feedforward 1024 \
+        --task lm \
+        --device cpu
+        
+    if [ $? -eq 0 ]; then
+        echo "✓ Model comparison completed successfully"
+    else
+        echo "✗ Model comparison failed"
+    fi
+else
+    echo "Not enough models for comparison (found $model_count, need at least 2)"
+fi
+
+# Step 6: Check final output
+echo "=========================="
+echo "Final analysis outputs:"
+echo "=========================="
+find outputs/analysis -type f | sort
+
+echo "Job completed at $(date)"
