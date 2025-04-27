@@ -66,7 +66,7 @@ run_experiment() {
     mkdir -p "$output_dir"  # Ensure output directory exists
     
     # Construct full command with explicit output path
-    local cmd="python train_ospa.py $base_params --transformer_type $transformer_type --orth_mode $orth_mode --orth_penalty_weight $orth_weight --output_dir $output_dir --save ${experiment_name}.pt --seed 42 $specific_params"
+    local cmd="python train.py $base_params --transformer_type $transformer_type --orth_mode $orth_mode --orth_penalty_weight $orth_weight --output_dir $output_dir --save ${experiment_name}.pt --seed 42 $specific_params"
     
     # Log full command
     echo "Running command: $cmd" >> $exp_log
@@ -90,10 +90,10 @@ run_experiment() {
 
 # Add debug code to verify that both training and analysis scripts exist
 log_message "Checking if required scripts exist..."
-if [ -f "train_ospa.py" ]; then
-    log_message "✓ Found train_ospa.py"
+if [ -f "train.py" ]; then
+    log_message "✓ Found train.py"
 else
-    log_message "✗ ERROR: train_ospa.py not found!"
+    log_message "✗ ERROR: train.py not found!"
     exit 1
 fi
 
