@@ -1,0 +1,13 @@
+2025-04-29 00:47:21,107 - INFO - Analysis script started with args: {'model_path': 'experiments/ospa_strict/ospa_strict.pt', 'output_dir': 'experiments/analysis/ospa_strict', 'task': 'lm', 'd_model': 512, 'nhead': 8, 'nlayers': 6, 'dim_feedforward': 2048, 'max_seq_len': 128, 'device': 'cpu', 'prefix': 'ospa_strict', 'compare': False, 'model_paths': None}
+2025-04-29 00:47:21,107 - INFO - Loading model from experiments/ospa_strict/ospa_strict.pt
+2025-04-29 00:47:23,318 - INFO - Model loaded successfully
+2025-04-29 00:47:23,318 - INFO - Adding store_attention_weights attribute to model
+2025-04-29 00:47:23,318 - INFO - Adding get_attention_weights method to model
+2025-04-29 00:47:23,319 - INFO - Adding attention hooks to model
+2025-04-29 00:47:23,319 - WARNING - Could not find suitable attention modules to hook
+2025-04-29 00:47:23,323 - INFO - Using vocabulary size: 30000
+2025-04-29 00:47:23,324 - INFO - Extracting attention patterns with a dummy forward pass...
+2025-04-29 00:47:23,407 - WARNING - No attention weights stored. Run with store_attention_weights=True first.
+2025-04-29 00:47:23,408 - INFO - Attention weights shape: torch.Size([0])
+2025-04-29 00:47:23,408 - WARNING - Creating dummy results since attention weight extraction failed
+2025-04-29 00:47:23,428 - INFO - Analysis completed successfully

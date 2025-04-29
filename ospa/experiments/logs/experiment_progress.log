@@ -1,0 +1,30 @@
+OSPA Experiment Run (FIXED) - Mon Apr 28 10:28:03 CDT 2025
+[10:28:03] Checking if required scripts exist...
+[10:28:03] ✓ Found train.py
+[10:28:03] ✓ Found analyze_head_diversity.py
+[10:28:03] ========== TRAINING BASELINE AND OSPA MODELS ==========
+[10:28:03] Starting experiment: vanilla_transformer
+[10:28:03] Model type: vanilla, Orth mode: init, Lambda: 0.0
+[10:37:18] ✓ Experiment vanilla_transformer completed successfully
+[10:37:18] Starting experiment: ospa_init
+[10:37:18] Model type: ospa, Orth mode: init, Lambda: 0.0
+[10:46:36] ✓ Experiment ospa_init completed successfully
+[10:46:36] Starting experiment: ospa_regularize_medium
+[10:46:36] Model type: ospa, Orth mode: regularize, Lambda: 0.001
+[10:57:07] ✓ Experiment ospa_regularize_medium completed successfully
+[10:57:07] Starting experiment: ospa_strict
+[10:57:07] Model type: ospa, Orth mode: strict, Lambda: 0.0
+[00:47:02] ✓ Experiment ospa_strict completed successfully
+[00:47:02] ========== ANALYZING MODEL HEAD DIVERSITY ==========
+[00:47:02] Analyzing model: vanilla (from experiments/vanilla/vanilla_transformer.pt)
+[00:47:06] ✓ Analysis completed for vanilla
+[00:47:06] Analyzing model: ospa_init (from experiments/ospa_init/ospa_init.pt)
+[00:47:13] ✓ Analysis completed for ospa_init
+[00:47:13] Analyzing model: ospa_regularize (from experiments/ospa_regularize/ospa_regularize_medium.pt)
+[00:47:18] ✓ Analysis completed for ospa_regularize
+[00:47:18] Analyzing model: ospa_strict (from experiments/ospa_strict/ospa_strict.pt)
+[00:47:23] ✓ Analysis completed for ospa_strict
+[00:47:23] Running comparative analysis of all models
+[00:47:23] Found 4 models for comparison
+[00:47:26] ✗ Model comparison failed
+[00:47:26] OSPA experiment (FIXED) completed at Tue Apr 29 00:47:26 CDT 2025

@@ -1,0 +1,7 @@
+{
+  "model_type": "ospa",
+  "error": "Failed to extract attention weights",
+  "diversity_score": 0.0,
+  "avg_entropy": 0.0,
+  "avg_effective_rank": 0.0
+}
