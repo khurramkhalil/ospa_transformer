@@ -1,13 +1,13 @@
 #!/bin/bash
 #SBATCH --partition=rss-gpu
 #SBATCH -N 1
-#SBATCH -c 60
+#SBATCH -c 32
 #SBATCH --mem 0G
-#SBATCH --gres=gpu:A100:4
+#SBATCH --gres=gpu:A100:1
 #SBATCH --export=all
 #SBATCH --out=OSPA_Fixed-%j.out
-#SBATCH --output=ospa_fixed.%J_stdout.txt
-#SBATCH --error=ospa_fixed.%J_stderr.txt
+#SBATCH --output=ospa_new_train.%J_stdout.txt
+#SBATCH --error=ospa_new_train.%J_stderr.txt
 #SBATCH --time=72:00:00
 #SBATCH --job-name=OSPA_Fixed
 #SBATCH --mail-user=khurram.khalil@missouri.edu
@@ -66,7 +66,7 @@ run_experiment() {
     mkdir -p "$output_dir"  # Ensure output directory exists
     
     # Construct full command with explicit output path
-    local cmd="python train.py $base_params --transformer_type $transformer_type --orth_mode $orth_mode --orth_penalty_weight $orth_weight --output_dir $output_dir --save ${experiment_name}.pt --seed 42 $specific_params"
+    local cmd="python train_new.py $base_params --transformer_type $transformer_type --orth_mode $orth_mode --orth_penalty_weight $orth_weight --output_dir $output_dir --save ${experiment_name}.pt --seed 42 $specific_params"
     
     # Log full command
     echo "Running command: $cmd" >> $exp_log
