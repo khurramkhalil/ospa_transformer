@@ -2,7 +2,7 @@
 #SBATCH --partition=rss-gpu
 #SBATCH -N 1
 #SBATCH -c 32
-#SBATCH --mem 0G
+#SBATCH --mem 100G
 #SBATCH --gres=gpu:A100:1
 #SBATCH --export=all
 #SBATCH --out=OSPA_Fixed-%j.out
