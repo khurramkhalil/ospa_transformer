@@ -6,362 +6,372 @@ import argparse
 import json
 import numpy as np
 import torch
-import torch.nn as nn
 import matplotlib.pyplot as plt
 import seaborn as sns
 from tqdm import tqdm
 from sklearn.metrics.pairwise import cosine_similarity
-import scipy.stats
 import logging
 import sys
+import re
 
 # Set up logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=[logging.StreamHandler(sys.stdout)]
 )
 logger = logging.getLogger(__name__)
-
-# Try importing the model - with extensive error handling
-try:
-    from improved_transformer_model import TransformerModel
-    logger.info("Successfully imported TransformerModel")
-except ImportError as e:
-    logger.error(f"Failed to import TransformerModel: {e}")
-    logger.error("Please make sure improved_transformer_model.py is in the current directory")
-    logger.error("Current directory: %s", os.getcwd())
-    logger.error("Directory contents: %s", os.listdir('.'))
-    sys.exit(1)
 
 # Set plot style
 plt.style.use('ggplot')
 sns.set(font_scale=1.2)
 sns.set_style("whitegrid")
 
-def patch_model_if_needed(model):
+def extract_weights_from_state_dict(state_dict, args):
     """
-    Patch the model with needed attributes/methods if they don't exist
+    Extract attention weights directly from state dict without loading the model
     """
-    # Add attention weights storage capability if missing
-    if not hasattr(model, 'store_attention_weights'):
-        logger.info("Adding store_attention_weights attribute to model")
-        model.store_attention_weights = False
-        model._attention_weights = []
+    # Determine model structure based on state dict keys
+    keys = list(state_dict.keys())
+    
+    # Identify key prefixes to understand structure
+    encoder_prefix = None
+    for potential_prefix in ['transformer.encoder', 'encoder', 'transformer_encoder']:
+        pattern = potential_prefix + ".*self_attn"
+        matching_keys = [k for k in keys if re.search(pattern, k)]
+        if matching_keys:
+            encoder_prefix = potential_prefix
+            logger.info(f"Detected encoder prefix: {encoder_prefix}")
+            break
+    
+    if not encoder_prefix:
+        logger.error("Could not identify encoder prefix in state dict")
+        return []
+    
+    # Find layer pattern
+    layer_pattern = None
+    patterns_to_try = [
+        encoder_prefix + r"\.layers\.(\d+)",
+        encoder_prefix + r"\.layer\.(\d+)",
+        encoder_prefix + r"\.(\d+)"
+    ]
+    
+    for pattern in patterns_to_try:
+        for key in keys:
+            match = re.search(pattern, key)
+            if match:
+                layer_pattern = pattern
+                logger.info(f"Detected layer pattern: {layer_pattern}")
+                break
+        if layer_pattern:
+            break
+    
+    if not layer_pattern:
+        logger.error("Could not identify layer pattern in state dict")
+        return []
+    
+    # Identify attention projection keys
+    attn_q_keys = [k for k in keys if 'q_proj.weight' in k or 'query.weight' in k]
+    attn_k_keys = [k for k in keys if 'k_proj.weight' in k or 'key.weight' in k]
+    attn_v_keys = [k for k in keys if 'v_proj.weight' in k or 'value.weight' in k]
+    
+    # Check if this is OSPA (has P_Q, P_K, etc.)
+    ospa_keys = [k for k in keys if any(p in k for p in ['P_Q', 'P_K', 'P_V', 'P_O'])]
+    is_ospa = len(ospa_keys) > 0
+    
+    if is_ospa:
+        logger.info("Detected OSPA model")
+        # Find OSPA projection keys
+        p_q_keys = [k for k in keys if 'P_Q' in k]
+        p_k_keys = [k for k in keys if 'P_K' in k]
+        p_v_keys = [k for k in keys if 'P_V' in k]
         
-    # Add getter for attention weights if missing
-    if not hasattr(model, 'get_attention_weights'):
-        logger.info("Adding get_attention_weights method to model")
-        def get_attention_weights(self):
-            if not hasattr(self, '_attention_weights') or not self._attention_weights:
-                logger.warning("No attention weights stored. Run with store_attention_weights=True first.")
-                return torch.tensor([])
-            return torch.stack(self._attention_weights)
-        
-        model.get_attention_weights = get_attention_weights.__get__(model)
+        if not (p_q_keys and p_k_keys and p_v_keys):
+            logger.error("Missing OSPA projection keys")
+            return []
     
-    # Add hook to store attention weights during forward pass
-    if not hasattr(model, '_has_attention_hooks'):
-        logger.info("Adding attention hooks to model")
-        
-        def hook_attention(module, inputs, outputs):
-            if hasattr(model, 'store_attention_weights') and model.store_attention_weights:
-                # Assume standard multi-head attention output format
-                attn_weights = outputs[1] if isinstance(outputs, tuple) and len(outputs) > 1 else None
-                if attn_weights is not None:
-                    if not hasattr(model, '_attention_weights'):
-                        model._attention_weights = []
-                    model._attention_weights.append(attn_weights.detach())
-        
-        # Try to register hooks on attention modules
-        hookable_modules_found = False
-        if hasattr(model, 'transformer_encoder') and hasattr(model.transformer_encoder, 'layers'):
-            for i, layer in enumerate(model.transformer_encoder.layers):
-                if hasattr(layer, 'self_attn'):
-                    layer.self_attn.register_forward_hook(hook_attention)
-                    hookable_modules_found = True
-        
-        if not hookable_modules_found:
-            logger.warning("Could not find suitable attention modules to hook")
-        
-        model._has_attention_hooks = True
+    # Group keys by layer
+    layer_weights = []
     
-    return model
-
-def create_dummy_data(model, vocab_size, args):
-    """
-    Create dummy input data for the model to extract attention patterns
-    """
-    device = torch.device(args.device)
+    # Determine number of layers
+    num_layers = 0
+    for key in keys:
+        match = re.search(layer_pattern, key)
+        if match:
+            layer_idx = int(match.group(1))
+            num_layers = max(num_layers, layer_idx + 1)
     
-    # Create random input data with sequence length and batch size
-    seq_len = min(args.max_seq_len, 128)  # Use a reasonable sequence length
-    batch_size = 4  # Small batch size for analysis
+    if not num_layers:
+        logger.error("Could not determine number of layers")
+        return []
     
-    if args.task == 'lm':
-        # For language modeling: [seq_len, batch_size]
-        dummy_input = torch.randint(0, vocab_size, (seq_len, batch_size), device=device)
-    else:
-        # For classification: [seq_len, batch_size]
-        dummy_input = torch.randint(0, vocab_size, (seq_len, batch_size), device=device)
+    logger.info(f"Detected {num_layers} layers")
     
-    return dummy_input
-
-def compute_attention_patterns(model, args, vocab_size):
-    """
-    Compute attention patterns from model using dummy input
-    """
-    device = torch.device(args.device)
-    model.to(device)
-    model.eval()
-    
-    # Reset attention weights storage
-    if hasattr(model, '_attention_weights'):
-        model._attention_weights = []
-    
-    # Enable attention weight storage
-    model.store_attention_weights = True
-    
-    # Create dummy input data
-    dummy_input = create_dummy_data(model, vocab_size, args)
-    
-    # Forward pass to capture attention weights
-    logger.info("Extracting attention patterns with a dummy forward pass...")
-    with torch.no_grad():
-        try:
-            # For language models, create a causal mask
-            if args.task == 'lm':
-                seq_len = dummy_input.size(0)
-                src_mask = nn.Transformer.generate_square_subsequent_mask(seq_len, device=device)
-                _ = model(dummy_input, src_mask=src_mask)
-            else:
-                _ = model(dummy_input)
-        except Exception as e:
-            logger.error(f"Error during forward pass: {e}")
-            raise
-    
-    # Get stored attention weights
-    attention_weights = model.get_attention_weights()
-    
-    # Disable attention weight storage
-    model.store_attention_weights = False
-    
-    return attention_weights
-
-def compute_head_similarity_matrix(attention_weights):
-    """
-    Compute cosine similarity between attention heads
-    """
-    if attention_weights.numel() == 0:
-        logger.error("Empty attention weights tensor")
-        return np.zeros((1, 1))
-    
-    # Get dimensions
-    if len(attention_weights.shape) == 4:
-        # Shape: [layer, head, seq_len, seq_len]
-        num_layers, num_heads, seq_len, _ = attention_weights.shape
-        
-        # Reshape to [layer*head, seq_len*seq_len]
-        flattened = attention_weights.reshape(num_layers * num_heads, -1).cpu().numpy()
-    else:
-        logger.warning(f"Unexpected attention weights shape: {attention_weights.shape}. " +
-                       "Expected [layer, head, seq_len, seq_len]")
-        if len(attention_weights.shape) > 1:
-            # Try to flatten to 2D as best we can
-            flattened = attention_weights.reshape(attention_weights.shape[0], -1).cpu().numpy()
-        else:
-            return np.zeros((1, 1))
-    
-    # Compute cosine similarity
-    similarity_matrix = cosine_similarity(flattened)
-    
-    return similarity_matrix
-
-def compute_attention_entropy(attention_weights):
-    """
-    Compute entropy of attention distributions as a measure of focus
-    """
-    if attention_weights.numel() == 0:
-        logger.error("Empty attention weights tensor")
-        return torch.zeros(1, 1)
-    
-    # Get dimensions
-    if len(attention_weights.shape) != 4:
-        logger.warning(f"Unexpected attention weights shape: {attention_weights.shape}")
-        return torch.zeros(1, 1)
-    
-    # Add small epsilon to avoid log(0)
-    epsilon = 1e-10
-    
-    # Ensure attention weights sum to 1 along the last dimension
-    attention_probs = attention_weights / (attention_weights.sum(dim=-1, keepdim=True) + epsilon)
-    
-    # Compute entropy: -sum(p * log(p))
-    entropy = -(attention_probs * torch.log(attention_probs + epsilon)).sum(dim=-1)
-    
-    # Average over sequence length
-    mean_entropy = entropy.mean(dim=-1)  # [layer, head]
-    
-    return mean_entropy
-
-def compute_effective_rank(attention_weights):
-    """
-    Compute effective rank of attention matrices
-    """
-    if attention_weights.numel() == 0:
-        logger.error("Empty attention weights tensor")
-        return torch.zeros(1, 1)
-    
-    # Get dimensions
-    if len(attention_weights.shape) != 4:
-        logger.warning(f"Unexpected attention weights shape: {attention_weights.shape}")
-        return torch.zeros(1, 1)
-    
-    num_layers, num_heads, seq_len, _ = attention_weights.shape
-    effective_rank = torch.zeros(num_layers, num_heads)
-    
-    for l in range(num_layers):
-        for h in range(num_heads):
-            # Get attention matrix for this head
-            head_weights = attention_weights[l, h]
+    # Process each layer
+    for layer_idx in range(num_layers):
+        if is_ospa:
+            # Find OSPA projections for this layer
+            p_q_key = None
+            p_k_key = None
+            p_v_key = None
             
-            try:
-                # Compute SVD
-                U, S, V = torch.svd(head_weights)
-                
-                # Normalize singular values
-                normalized_S = S / torch.sum(S)
-                
-                # Compute entropy of normalized singular values as effective rank
-                entropy = -torch.sum(normalized_S * torch.log(normalized_S + 1e-10))
-                effective_rank[l, h] = torch.exp(entropy)
-            except Exception as e:
-                logger.warning(f"SVD failed for layer {l}, head {h}: {e}")
-                effective_rank[l, h] = 0
+            layer_pattern_str = layer_pattern.replace(r'(\d+)', str(layer_idx))
+            
+            for key in p_q_keys:
+                if re.search(layer_pattern_str, key):
+                    p_q_key = key
+                    break
+            
+            for key in p_k_keys:
+                if re.search(layer_pattern_str, key):
+                    p_k_key = key
+                    break
+            
+            for key in p_v_keys:
+                if re.search(layer_pattern_str, key):
+                    p_v_key = key
+                    break
+            
+            if p_q_key and p_k_key and p_v_key:
+                try:
+                    p_q = state_dict[p_q_key]
+                    p_k = state_dict[p_k_key]
+                    p_v = state_dict[p_v_key]
+                    
+                    layer_weights.append((p_q, p_k, p_v, True))
+                    logger.info(f"Extracted OSPA weights for layer {layer_idx}")
+                except Exception as e:
+                    logger.error(f"Error extracting OSPA weights for layer {layer_idx}: {e}")
+            else:
+                logger.warning(f"Missing OSPA projection keys for layer {layer_idx}")
+        else:
+            # Find attention projections for this layer
+            q_key = None
+            k_key = None
+            v_key = None
+            
+            layer_pattern_str = layer_pattern.replace(r'(\d+)', str(layer_idx))
+            
+            for key in attn_q_keys:
+                if re.search(layer_pattern_str, key):
+                    q_key = key
+                    break
+            
+            for key in attn_k_keys:
+                if re.search(layer_pattern_str, key):
+                    k_key = key
+                    break
+            
+            for key in attn_v_keys:
+                if re.search(layer_pattern_str, key):
+                    v_key = key
+                    break
+            
+            if q_key and k_key and v_key:
+                try:
+                    q_weight = state_dict[q_key]
+                    k_weight = state_dict[k_key]
+                    v_weight = state_dict[v_key]
+                    
+                    layer_weights.append((q_weight, k_weight, v_weight, False))
+                    logger.info(f"Extracted vanilla weights for layer {layer_idx}")
+                except Exception as e:
+                    logger.error(f"Error extracting vanilla weights for layer {layer_idx}: {e}")
+            else:
+                logger.warning(f"Missing projection keys for layer {layer_idx}")
     
-    return effective_rank
+    return layer_weights
 
-def check_orthogonality(model):
+def compute_head_similarity(qkv_weights, nhead):
     """
-    Check if the model has orthogonal projection matrices
+    Compute similarity between attention heads
     """
-    if not hasattr(model, 'transformer_type') or model.transformer_type != 'ospa':
+    if not qkv_weights:
+        logger.error("No weights to compute similarity from")
+        return np.zeros((1, 1)), 0
+    
+    # Process weights into head representations
+    flattened_heads = []
+    
+    for layer_idx, (q, k, v, is_ospa) in enumerate(qkv_weights):
+        try:
+            if is_ospa:
+                # For OSPA: P_Q, P_K, P_V are orthogonal matrices
+                # Reshape based on number of heads
+                d_model = q.size(0)
+                head_dim = d_model // nhead
+                
+                # Split projection matrices by head dimensions
+                for head_idx in range(nhead):
+                    start_idx = head_idx * head_dim
+                    end_idx = (head_idx + 1) * head_dim
+                    
+                    # Get slice of projection matrices for this head
+                    q_head = q[start_idx:end_idx].flatten()
+                    k_head = k[start_idx:end_idx].flatten()
+                    v_head = v[start_idx:end_idx].flatten()
+                    
+                    # Concatenate to get head representation
+                    head_vector = torch.cat([q_head, k_head, v_head])
+                    flattened_heads.append(head_vector.cpu().numpy())
+            else:
+                # For vanilla transformer with shape [nhead*head_dim, d_model]
+                d_model = q.size(1) if q.dim() > 1 else int(np.sqrt(q.size(0)))
+                
+                # Try to figure out head dimension
+                if q.dim() > 1:
+                    head_dim = q.size(0) // nhead
+                else:
+                    head_dim = d_model // nhead
+                
+                # Try to reshape
+                try:
+                    if q.dim() > 1:
+                        # If already in form [nhead*head_dim, d_model]
+                        q_reshaped = q.view(nhead, head_dim, d_model)
+                        k_reshaped = k.view(nhead, head_dim, d_model)
+                        v_reshaped = v.view(nhead, head_dim, d_model)
+                    else:
+                        # If flattened
+                        q_reshaped = q.view(nhead, head_dim, d_model)
+                        k_reshaped = k.view(nhead, head_dim, d_model)
+                        v_reshaped = v.view(nhead, head_dim, d_model)
+                except:
+                    # Try alternate dimension
+                    logger.warning(f"Reshape failed, trying alternate dimensions for layer {layer_idx}")
+                    total_size = q.numel()
+                    head_dim = total_size // (nhead * d_model)
+                    
+                    q_reshaped = q.view(nhead, head_dim, d_model)
+                    k_reshaped = k.view(nhead, head_dim, d_model)
+                    v_reshaped = v.view(nhead, head_dim, d_model)
+                
+                # Process each head
+                for head_idx in range(nhead):
+                    # Concatenate q, k, v for this head and flatten
+                    head_vector = torch.cat([
+                        q_reshaped[head_idx].flatten(), 
+                        k_reshaped[head_idx].flatten(), 
+                        v_reshaped[head_idx].flatten()
+                    ])
+                    flattened_heads.append(head_vector.cpu().numpy())
+        except Exception as e:
+            logger.error(f"Error processing layer {layer_idx}: {e}")
+    
+    if not flattened_heads:
+        logger.error("Failed to process any heads")
+        return np.zeros((1, 1)), 0
+    
+    # Compute pairwise cosine similarity
+    similarity_matrix = cosine_similarity(flattened_heads)
+    
+    # Compute diversity score (average off-diagonal similarity)
+    diversity_score = float(np.mean(similarity_matrix) - np.mean(np.diag(similarity_matrix)))
+    
+    return similarity_matrix, diversity_score
+
+def check_orthogonality(qkv_weights):
+    """
+    Check orthogonality of OSPA projection matrices
+    """
+    if not qkv_weights:
         return None
     
     orthogonality_scores = {}
     
-    # Try to access projection matrices in the model
-    if hasattr(model, 'transformer_encoder') and hasattr(model.transformer_encoder, 'layers'):
-        for layer_idx, layer in enumerate(model.transformer_encoder.layers):
-            if hasattr(layer, 'self_attn'):
-                mha = layer.self_attn
-                
-                # Check for OSPA-specific attributes
-                p_matrices = []
-                for attr_name in ['P_Q', 'P_K', 'P_V', 'P_O']:
-                    if hasattr(mha, attr_name):
-                        p_matrices.append((attr_name, getattr(mha, attr_name)))
-                
-                if p_matrices:
-                    layer_scores = {}
-                    for name, P in p_matrices:
-                        # Compute orthogonality error: ||P^T P - I||_F^2
-                        try:
-                            error = torch.norm(
-                                torch.matmul(P.transpose(-2, -1), P) - 
-                                torch.eye(P.shape[-1], device=P.device), 
-                                p='fro'
-                            ).item()
-                            layer_scores[f'{name}_error'] = error
-                        except Exception as e:
-                            logger.warning(f"Error computing orthogonality for {name} in layer {layer_idx}: {e}")
-                            layer_scores[f'{name}_error'] = float('nan')
-                    
-                    # Compute average error across all projection matrices
-                    valid_errors = [v for v in layer_scores.values() if not np.isnan(v)]
-                    if valid_errors:
-                        layer_scores['avg_error'] = sum(valid_errors) / len(valid_errors)
-                    
-                    orthogonality_scores[f'layer_{layer_idx}'] = layer_scores
+    for layer_idx, (q, k, v, is_ospa) in enumerate(qkv_weights):
+        if not is_ospa:
+            continue
+            
+        try:
+            # Compute orthogonality error: ||P^T P - I||_F^2
+            q_error = torch.norm(
+                torch.matmul(q.transpose(-2, -1), q) - 
+                torch.eye(q.shape[-1], device=q.device), 
+                p='fro'
+            ).item()
+            
+            k_error = torch.norm(
+                torch.matmul(k.transpose(-2, -1), k) - 
+                torch.eye(k.shape[-1], device=k.device), 
+                p='fro'
+            ).item()
+            
+            v_error = torch.norm(
+                torch.matmul(v.transpose(-2, -1), v) - 
+                torch.eye(v.shape[-1], device=v.device), 
+                p='fro'
+            ).item()
+            
+            # Add to results
+            orthogonality_scores[f'layer_{layer_idx}'] = {
+                'P_Q_error': q_error,
+                'P_K_error': k_error,
+                'P_V_error': v_error,
+                'avg_error': (q_error + k_error + v_error) / 3
+            }
+            
+        except Exception as e:
+            logger.error(f"Error computing orthogonality for layer {layer_idx}: {e}")
     
-    # Compute overall average if we have data
+    # Compute overall average
     if orthogonality_scores:
-        avg_errors = [
-            scores.get('avg_error', float('nan')) 
-            for scores in orthogonality_scores.values() 
-            if 'avg_error' in scores
-        ]
+        avg_errors = [scores['avg_error'] for scores in orthogonality_scores.values()]
+        orthogonality_scores['overall_avg_error'] = sum(avg_errors) / len(avg_errors)
         
-        valid_avgs = [e for e in avg_errors if not np.isnan(e)]
-        if valid_avgs:
-            orthogonality_scores['overall_avg_error'] = sum(valid_avgs) / len(valid_avgs)
-    
     return orthogonality_scores
 
-def evaluate_head_diversity(model, args):
+def analyze_model(model_path, output_dir, args):
     """
-    Main function to evaluate and visualize head diversity metrics
+    Analyze head diversity for a single model
     """
-    output_dir = args.output_dir
+    logger.info(f"Analyzing model: {model_path}")
     os.makedirs(output_dir, exist_ok=True)
     
-    # Determine vocabulary size from model if possible
-    vocab_size = getattr(model, 'vocab_size', 10000)
-    logger.info(f"Using vocabulary size: {vocab_size}")
-    
-    # 1. Compute attention patterns
+    # Load state dict
     try:
-        attention_weights = compute_attention_patterns(model, args, vocab_size)
-        logger.info(f"Attention weights shape: {attention_weights.shape}")
-    except Exception as e:
-        logger.error(f"Failed to compute attention patterns: {e}")
-        attention_weights = torch.tensor([])
-    
-    # If attention weights extraction failed, create a dummy result
-    if attention_weights.numel() == 0:
-        logger.warning("Creating dummy results since attention weight extraction failed")
-        results = {
-            'model_type': getattr(model, 'transformer_type', 'unknown'),
-            'error': "Failed to extract attention weights",
-            'diversity_score': 0.0,
-            'avg_entropy': 0.0,
-            'avg_effective_rank': 0.0
-        }
+        state_dict = torch.load(model_path, map_location='cpu')
+        logger.info(f"Successfully loaded state dict from {model_path}")
         
-        with open(os.path.join(output_dir, f"{args.prefix}_diversity_metrics.json"), 'w') as f:
-            json.dump(results, f, indent=2)
+        # If state_dict has a 'state_dict' key, use that
+        if isinstance(state_dict, dict) and 'state_dict' in state_dict:
+            state_dict = state_dict['state_dict']
+            logger.info("Extracted nested state_dict")
             
-        return results
+    except Exception as e:
+        logger.error(f"Error loading state dict: {e}")
+        return None
     
-    # 2. Compute head similarity matrix
-    similarity_matrix = compute_head_similarity_matrix(attention_weights)
+    # Extract weights directly from state dict
+    qkv_weights = extract_weights_from_state_dict(state_dict, args)
     
-    # 3. Compute attention entropy
-    entropy = compute_attention_entropy(attention_weights)
+    if not qkv_weights:
+        logger.error("Failed to extract weights from model")
+        return None
     
-    # 4. Compute effective rank
-    effective_rank = compute_effective_rank(attention_weights)
+    # Check if this is an OSPA model
+    is_ospa = any(is_ospa for _, _, _, is_ospa in qkv_weights)
+    model_type = 'ospa' if is_ospa else 'vanilla'
+    logger.info(f"Detected model type: {model_type}")
     
-    # 5. Check orthogonality for OSPA models
-    orthogonality_scores = check_orthogonality(model)
+    # Compute similarity
+    similarity_matrix, diversity_score = compute_head_similarity(qkv_weights, args.nhead)
     
-    # 6. Compile results
+    # Check orthogonality (for OSPA models)
+    orthogonality_scores = check_orthogonality(qkv_weights) if is_ospa else None
+    
+    # Compile results
     results = {
-        'model_type': getattr(model, 'transformer_type', 'unknown'),
-        'avg_similarity': float(np.mean(similarity_matrix) - np.mean(np.diag(similarity_matrix))),
-        'avg_entropy': float(entropy.mean().item()) if entropy.numel() > 0 else 0.0,
-        'avg_effective_rank': float(effective_rank.mean().item()) if effective_rank.numel() > 0 else 0.0,
+        'model_type': model_type,
+        'model_path': model_path,
+        'diversity_score': diversity_score,
+        'num_layers': len(qkv_weights),
+        'num_heads': args.nhead,
         'orthogonality_scores': orthogonality_scores
     }
     
-    # Calculate diversity score (lower is more diverse)
-    diversity_score = float(np.mean(similarity_matrix) - np.mean(np.diag(similarity_matrix)))
-    results['diversity_score'] = diversity_score
-    
-    # Save numeric results
-    with open(os.path.join(output_dir, f"{args.prefix}_diversity_metrics.json"), 'w') as f:
+    # Save results as JSON
+    with open(os.path.join(output_dir, "diversity_metrics.json"), 'w') as f:
         json.dump(results, f, indent=2)
     
     # Create visualizations
@@ -383,301 +393,94 @@ def evaluate_head_diversity(model, args):
         plt.xlabel('Head Index (layer * num_heads + head)')
         plt.ylabel('Head Index (layer * num_heads + head)')
         plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, f"{args.prefix}_head_similarity.png"), dpi=300)
+        plt.savefig(os.path.join(output_dir, "head_similarity.png"), dpi=300)
         plt.close()
+        logger.info(f"Created head similarity visualization")
     except Exception as e:
-        logger.error(f"Error creating head similarity heatmap: {e}")
+        logger.error(f"Error creating head similarity visualization: {e}")
     
-    # 2. Attention entropy by layer and head
-    if entropy.numel() > 0:
+    # 2. Plot orthogonality metrics (for OSPA models)
+    if orthogonality_scores and len(orthogonality_scores) > 1:  # More than just overall_avg_error
         try:
-            plt.figure(figsize=(10, 6))
-            sns.heatmap(
-                entropy.cpu().numpy(), 
-                cmap='coolwarm', 
-                annot=True, 
-                fmt=".2f",
-                cbar_kws={'label': 'Entropy'}
-            )
-            plt.title('Attention Entropy by Layer and Head (Higher = More Uniform Attention)')
-            plt.xlabel('Head Index')
-            plt.ylabel('Layer Index')
-            plt.tight_layout()
-            plt.savefig(os.path.join(output_dir, f"{args.prefix}_attention_entropy.png"), dpi=300)
-            plt.close()
-        except Exception as e:
-            logger.error(f"Error creating attention entropy heatmap: {e}")
-    
-    # 3. Effective rank by layer and head
-    if effective_rank.numel() > 0:
-        try:
-            plt.figure(figsize=(10, 6))
-            sns.heatmap(
-                effective_rank.cpu().numpy(), 
-                cmap='YlGnBu', 
-                annot=True, 
-                fmt=".1f",
-                cbar_kws={'label': 'Effective Rank'}
-            )
-            plt.title('Effective Rank by Layer and Head (Higher = More Complex Patterns)')
-            plt.xlabel('Head Index')
-            plt.ylabel('Layer Index')
-            plt.tight_layout()
-            plt.savefig(os.path.join(output_dir, f"{args.prefix}_effective_rank.png"), dpi=300)
-            plt.close()
-        except Exception as e:
-            logger.error(f"Error creating effective rank heatmap: {e}")
-    
-    # 4. Visualize attention patterns for selected heads
-    if attention_weights.numel() > 0 and len(attention_weights.shape) == 4:
-        try:
-            num_layers, num_heads = entropy.shape
-            
-            # Select interesting heads
-            max_entropy_indices = np.unravel_index(entropy.cpu().argmax().item(), entropy.shape)
-            min_entropy_indices = np.unravel_index(entropy.cpu().argmin().item(), entropy.shape)
-            
-            heads_to_visualize = {
-                'highest_entropy': max_entropy_indices,
-                'lowest_entropy': min_entropy_indices
-            }
-            
-            # Add highest_rank if effective_rank is valid
-            if effective_rank.numel() > 0:
-                max_rank_indices = np.unravel_index(effective_rank.cpu().argmax().item(), effective_rank.shape)
-                heads_to_visualize['highest_rank'] = max_rank_indices
-            
-            # Visualize each selected head
-            for name, (layer_idx, head_idx) in heads_to_visualize.items():
-                plt.figure(figsize=(8, 6))
-                
-                # Get attention pattern for this head
-                attn = attention_weights[layer_idx, head_idx].cpu().numpy()
-                
-                # Display as heatmap
-                im = plt.imshow(attn, cmap='viridis')
-                plt.colorbar(im, label='Attention Weight')
-                plt.title(f'Attention Pattern: Layer {layer_idx}, Head {head_idx} ({name})')
-                plt.xlabel('Key Position')
-                plt.ylabel('Query Position')
-                plt.tight_layout()
-                plt.savefig(os.path.join(output_dir, f"{args.prefix}_attention_pattern_{name}.png"), dpi=300)
-                plt.close()
-        except Exception as e:
-            logger.error(f"Error visualizing attention patterns: {e}")
-    
-    # 5. If OSPA, plot orthogonality metrics
-    if orthogonality_scores:
-        try:
-            # Extract layer-wise orthogonality errors
             layers = [int(k.split('_')[1]) for k in orthogonality_scores.keys() if k != 'overall_avg_error']
+            layers.sort()
             
-            if layers:
-                layers.sort()
-                
-                # Collect metrics for each layer
-                metrics = ['P_Q_error', 'P_K_error', 'P_V_error', 'P_O_error', 'avg_error']
-                data = {metric: [] for metric in metrics}
-                
-                for layer in layers:
-                    layer_scores = orthogonality_scores.get(f'layer_{layer}', {})
-                    for metric in metrics:
-                        data[metric].append(layer_scores.get(metric, float('nan')))
-                
-                # Plot
-                plt.figure(figsize=(10, 6))
-                
+            metrics = ['P_Q_error', 'P_K_error', 'P_V_error', 'avg_error']
+            data = {metric: [] for metric in metrics}
+            
+            for layer in layers:
+                scores = orthogonality_scores[f'layer_{layer}']
                 for metric in metrics:
-                    if any(not np.isnan(x) for x in data[metric]):
-                        label = 'Average Error' if metric == 'avg_error' else f"{metric.split('_')[0]} Projection"
-                        style = '*-' if metric == 'avg_error' else 'o-'
-                        plt.plot(layers, data[metric], style, label=label)
-                
-                plt.axhline(y=0.0, color='k', linestyle='--', alpha=0.5)
-                plt.grid(True, alpha=0.3)
-                plt.xlabel('Layer Index')
-                plt.ylabel('Orthogonality Error ||P^T P - I||_F^2')
-                plt.title('OSPA Orthogonality Errors by Layer')
-                plt.legend()
-                plt.tight_layout()
-                plt.savefig(os.path.join(output_dir, f"{args.prefix}_orthogonality_error.png"), dpi=300)
-                plt.close()
+                    data[metric].append(scores[metric])
+            
+            plt.figure(figsize=(10, 6))
+            
+            for metric, values in data.items():
+                label = 'Average Error' if metric == 'avg_error' else f"{metric.split('_')[0]} Projection"
+                style = '*-' if metric == 'avg_error' else 'o-'
+                plt.plot(layers, values, style, label=label)
+            
+            plt.axhline(y=0.0, color='k', linestyle='--', alpha=0.5)
+            plt.grid(True, alpha=0.3)
+            plt.xlabel('Layer Index')
+            plt.ylabel('Orthogonality Error ||P^T P - I||_F^2')
+            plt.title('OSPA Orthogonality Errors by Layer')
+            plt.legend()
+            plt.tight_layout()
+            plt.savefig(os.path.join(output_dir, "orthogonality_error.png"), dpi=300)
+            plt.close()
+            logger.info("Created orthogonality visualization")
         except Exception as e:
-            logger.error(f"Error plotting orthogonality metrics: {e}")
+            logger.error(f"Error creating orthogonality visualization: {e}")
     
-    logger.info(f"Analysis complete. Results saved to {output_dir}")
+    logger.info(f"Analysis complete for {model_path}")
+    logger.info(f"Diversity score: {diversity_score:.4f} (lower is better)")
+    
     return results
 
-def load_model(args):
+def compare_models(model_results, output_dir):
     """
-    Load model with extensive error handling
+    Create comparison visualizations for multiple models
     """
-    logger.info(f"Loading model from {args.model_path}")
-    
-    if not os.path.exists(args.model_path):
-        logger.error(f"Model file not found: {args.model_path}")
-        sys.exit(1)
-    
-    try:
-        # Try to create a new model instance first
-        model = TransformerModel(
-            transformer_type='vanilla' if 'vanilla' in args.model_path else 'ospa',
-            vocab_size=30000,  # We'll just use a placeholder
-            d_model=args.d_model,
-            nhead=args.nhead,
-            nlayers=args.nlayers,
-            dropout=0.1,
-            dim_feedforward=args.dim_feedforward,
-            orth_mode='init',  # Default
-            orth_penalty_weight=0.0,  # Default
-            task=args.task
-        )
-        
-        # Load state dict
-        state_dict = torch.load(args.model_path, map_location='cpu')
-        
-        # Check if we got a state dict or a full model
-        if isinstance(state_dict, dict) and 'state_dict' in state_dict:
-            state_dict = state_dict['state_dict']
-        
-        model.load_state_dict(state_dict)
-        logger.info("Model loaded successfully")
-        
-        # Set model attributes from file path if possible
-        if 'ospa' in args.model_path:
-            model.transformer_type = 'ospa'
-            if 'regularize' in args.model_path:
-                model.orth_mode = 'regularize'
-            elif 'strict' in args.model_path:
-                model.orth_mode = 'strict'
-            elif 'init' in args.model_path:
-                model.orth_mode = 'init'
-        else:
-            model.transformer_type = 'vanilla'
-            model.orth_mode = 'init'
-        
-        # Patch model with required analysis methods if needed
-        model = patch_model_if_needed(model)
-        
-        return model
-        
-    except Exception as e:
-        logger.error(f"Error loading model: {e}")
-        logger.error("Model file exists but could not be loaded")
-        logger.error("Trying to inspect model file...")
-        
-        try:
-            # Try to load as generic state dict 
-            state_dict = torch.load(args.model_path, map_location='cpu')
-            logger.info(f"Model file loaded as a dictionary with {len(state_dict)} keys")
-            
-            # Print first few keys to help diagnosis
-            sample_keys = list(state_dict.keys())[:5]
-            logger.info(f"Sample keys: {sample_keys}")
-            
-            # Create a new minimal model and try to adjust keys
-            logger.info("Attempting to create a minimal compatible model...")
-            
-            # Determine model type from filepath
-            if 'ospa' in args.model_path.lower():
-                transformer_type = 'ospa'
-                if 'regularize' in args.model_path.lower():
-                    orth_mode = 'regularize' 
-                elif 'strict' in args.model_path.lower():
-                    orth_mode = 'strict'
-                else:
-                    orth_mode = 'init'
-            else:
-                transformer_type = 'vanilla'
-                orth_mode = 'init'
-                
-            logger.info(f"Creating model with type={transformer_type}, mode={orth_mode}")
-            
-            model = TransformerModel(
-                transformer_type=transformer_type,
-                vocab_size=30000,  # Just a placeholder
-                d_model=args.d_model,
-                nhead=args.nhead,
-                nlayers=args.nlayers,
-                dropout=0.1,
-                dim_feedforward=args.dim_feedforward,
-                orth_mode=orth_mode,
-                orth_penalty_weight=0.0,
-                task=args.task
-            )
-            
-            # Set attributes
-            model.transformer_type = transformer_type
-            model.orth_mode = orth_mode
-            
-            # Patch model with required methods
-            model = patch_model_if_needed(model)
-            
-            logger.info("Created model stub for analysis")
-            return model
-            
-        except Exception as nested_e:
-            logger.error(f"Could not inspect or create fallback model: {nested_e}")
-            sys.exit(1)
-
-def compare_models(args_list, output_dir):
-    """
-    Compare head diversity metrics across multiple models
-    """
-    os.makedirs(output_dir, exist_ok=True)
-    logger.info(f"Comparing {len(args_list)} models")
-    
-    # Load models and collect metrics
-    all_metrics = []
-    
-    for i, args in enumerate(args_list):
-        logger.info(f"Analyzing model {i+1}/{len(args_list)}: {args.model_path}")
-        
-        try:
-            # Load model
-            model = load_model(args)
-            
-            # Create temp args with prefix for this model
-            temp_args = argparse.Namespace(**vars(args))
-            model_name = os.path.basename(args.model_path).split('.')[0]
-            temp_args.prefix = model_name
-            
-            # Run analysis
-            model_dir = os.path.join(output_dir, model_name)
-            os.makedirs(model_dir, exist_ok=True)
-            temp_args.output_dir = model_dir
-            
-            metrics = evaluate_head_diversity(model, temp_args)
-            metrics['model_name'] = model_name
-            all_metrics.append(metrics)
-            
-        except Exception as e:
-            logger.error(f"Error analyzing model {args.model_path}: {e}")
-            logger.error("Skipping this model in the comparison")
-    
-    if len(all_metrics) < 2:
-        logger.error("Not enough models with valid metrics for comparison")
+    if len(model_results) < 2:
+        logger.error("Need at least 2 models to compare")
         return
     
-    logger.info(f"Creating comparison visualizations for {len(all_metrics)} models")
+    logger.info(f"Creating comparison visualizations for {len(model_results)} models")
+    os.makedirs(output_dir, exist_ok=True)
     
+    # Extract model names and diversity scores
+    model_names = []
+    diversity_scores = []
+    model_types = []
+    
+    for model_path, results in model_results.items():
+        if results is None:
+            continue
+            
+        model_name = os.path.basename(model_path).split('.')[0]
+        model_names.append(model_name)
+        diversity_scores.append(results['diversity_score'])
+        model_types.append(results['model_type'])
+    
+    if len(model_names) < 2:
+        logger.error("Not enough models with valid results to compare")
+        return
+    
+    # Sort by model type first (vanilla, then ospa), then by diversity score
+    sorted_indices = sorted(range(len(model_names)), 
+                          key=lambda i: (model_types[i] == 'vanilla', diversity_scores[i]))
+    
+    model_names = [model_names[i] for i in sorted_indices]
+    diversity_scores = [diversity_scores[i] for i in sorted_indices]
+    model_types = [model_types[i] for i in sorted_indices]
+    
+    # Create bar chart of diversity scores
     try:
-        # Create comparison visualizations
-        
-        # 1. Bar chart of diversity scores
         plt.figure(figsize=(10, 6))
-        model_names = [m['model_name'] for m in all_metrics]
-        diversity_scores = [m['diversity_score'] for m in all_metrics]
-        
-        # Sort by model type first (vanilla, then ospa)
-        sorted_indices = sorted(range(len(model_names)), 
-                                key=lambda i: ('vanilla' in model_names[i], diversity_scores[i]))
-        
-        model_names = [model_names[i] for i in sorted_indices]
-        diversity_scores = [diversity_scores[i] for i in sorted_indices]
         
         # Set colors based on model type
-        colors = ['#ff9999' if 'vanilla' in name else '#66b3ff' for name in model_names]
+        colors = ['#ff9999' if t == 'vanilla' else '#66b3ff' for t in model_types]
         
         plt.bar(range(len(model_names)), diversity_scores, color=colors)
         plt.xticks(range(len(model_names)), model_names, rotation=45, ha='right')
@@ -689,140 +492,64 @@ def compare_models(args_list, output_dir):
         plt.tight_layout()
         plt.savefig(os.path.join(output_dir, "model_diversity_comparison.png"), dpi=300)
         plt.close()
-        
-        # 2. Combined metrics comparison
-        metrics_to_compare = ['avg_entropy', 'avg_effective_rank', 'diversity_score']
-        metrics_labels = ['Average Entropy', 'Average Effective Rank', 'Diversity Score']
-        
-        # Normalize metrics for fair comparison
-        normalized_metrics = []
-        for metric in metrics_to_compare:
-            values = [m[metric] for m in all_metrics]
-            min_val, max_val = min(values), max(values)
-            
-            # Handle case where all values are the same
-            if max_val == min_val:
-                normalized = [0.5 for _ in values]
-            else:
-                # For diversity_score, lower is better, so invert the normalization
-                if metric == 'diversity_score':
-                    normalized = [1 - (v - min_val) / (max_val - min_val) for v in values]
-                else:
-                    normalized = [(v - min_val) / (max_val - min_val) for v in values]
-            
-            normalized_metrics.append(normalized)
-        
-        # Radar chart for combined metrics
-        num_models = len(model_names)
-        num_metrics = len(metrics_to_compare)
-        
-        angles = np.linspace(0, 2*np.pi, num_metrics, endpoint=False).tolist()
-        angles += angles[:1]  # Close the loop
-        
-        fig, ax = plt.subplots(figsize=(10, 8), subplot_kw=dict(polar=True))
-        
-        for i, model_name in enumerate(model_names):
-            values = [normalized_metrics[j][i] for j in range(num_metrics)]
-            values += values[:1]  # Close the loop
-            
-            ax.plot(angles, values, 'o-', linewidth=2, label=model_name)
-            ax.fill(angles, values, alpha=0.1)
-        
-        ax.set_xticks(angles[:-1])
-        ax.set_xticklabels(metrics_labels)
-        ax.set_yticks([0.2, 0.4, 0.6, 0.8, 1.0])
-        ax.set_yticklabels(['0.2', '0.4', '0.6', '0.8', '1.0'])
-        ax.set_ylim(0, 1)
-        
-        plt.legend(loc='upper right', bbox_to_anchor=(0.1, 0.1))
-        plt.title('Normalized Metrics Comparison (Higher is Better)')
-        plt.tight_layout()
-        plt.savefig(os.path.join(output_dir, "radar_metrics_comparison.png"), dpi=300)
-        plt.close()
-        
-        # Save comparison metrics to JSON
-        comparison_results = {
-            'models': model_names,
-            'metrics': {
-                metric: [m[metric] for m in all_metrics] for metric in metrics_to_compare
-            }
-        }
-        
-        with open(os.path.join(output_dir, "diversity_comparison_metrics.json"), 'w') as f:
-            json.dump(comparison_results, f, indent=2)
-        
-        logger.info("Model comparison visualizations created")
-    
+        logger.info("Created diversity comparison visualization")
     except Exception as e:
-        logger.error(f"Error creating comparison visualizations: {e}")
+        logger.error(f"Error creating diversity comparison: {e}")
+    
+    # Save comparison data
+    comparison_data = {
+        'models': model_names,
+        'diversity_scores': diversity_scores,
+        'model_types': model_types
+    }
+    
+    with open(os.path.join(output_dir, "diversity_comparison.json"), 'w') as f:
+        json.dump(comparison_data, f, indent=2)
+    
+    logger.info("Model comparison complete")
 
 def main():
-    parser = argparse.ArgumentParser(description='Analyze diversity of attention heads in transformer models')
+    parser = argparse.ArgumentParser(description='Analyze attention head diversity in transformer models')
     
-    # Model and data parameters
-    parser.add_argument('--model_path', type=str, required=True,
-                        help='Path to the trained model checkpoint')
-    parser.add_argument('--output_dir', type=str, default='analysis_results',
-                        help='Directory to save analysis results')
-    parser.add_argument('--task', type=str, choices=['lm', 'classification'], default='lm',
-                        help='Task type (language modeling or classification)')
+    # Model parameters
+    parser.add_argument('--model_path', type=str, help='Path to model checkpoint')
+    parser.add_argument('--output_dir', type=str, default='analysis_results', help='Output directory')
+    parser.add_argument('--d_model', type=int, default=512, help='Model dimension')
+    parser.add_argument('--nhead', type=int, default=8, help='Number of attention heads')
+    parser.add_argument('--nlayers', type=int, default=6, help='Number of layers')
+    parser.add_argument('--dim_feedforward', type=int, default=2048, help='Feedforward dimension')
+    parser.add_argument('--task', type=str, default='lm', choices=['lm', 'classification'], help='Task type')
     
-    # Model architecture parameters (should match trained model)
-    parser.add_argument('--d_model', type=int, default=512,
-                        help='Model embedding dimension')
-    parser.add_argument('--nhead', type=int, default=8,
-                        help='Number of attention heads')
-    parser.add_argument('--nlayers', type=int, default=6,
-                        help='Number of transformer encoder layers')
-    parser.add_argument('--dim_feedforward', type=int, default=2048,
-                        help='Dimension of feedforward network')
-    
-    # Analysis parameters
-    parser.add_argument('--max_seq_len', type=int, default=128,
-                        help='Maximum sequence length for dummy data')
-    parser.add_argument('--device', type=str, default='cpu',
-                        help='Device to use for computation')
-    parser.add_argument('--prefix', type=str, default='model',
-                        help='Prefix for output filenames')
-    
-    # Comparison mode
-    parser.add_argument('--compare', action='store_true',
-                        help='Enable comparison mode between multiple models')
-    parser.add_argument('--model_paths', type=str, nargs='+',
-                        help='Paths to multiple model checkpoints for comparison')
+    # Compare mode
+    parser.add_argument('--compare', action='store_true', help='Compare multiple models')
+    parser.add_argument('--model_paths', nargs='+', help='Paths to multiple models for comparison')
     
     args = parser.parse_args()
     
-    # Configure logging to file in output directory
-    os.makedirs(args.output_dir, exist_ok=True)
-    file_handler = logging.FileHandler(os.path.join(args.output_dir, 'analysis.log'))
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-    logger.addHandler(file_handler)
-    
-    logger.info(f"Analysis script started with args: {vars(args)}")
-    
+    # Validate arguments
     if args.compare:
         if not args.model_paths or len(args.model_paths) < 2:
             logger.error("--compare requires at least two model paths via --model_paths")
-            sys.exit(1)
+            return
         
-        # Create args for each model
-        args_list = []
+        # Analyze multiple models
+        results = {}
         for model_path in args.model_paths:
-            model_args = argparse.Namespace(**vars(args))
-            model_args.model_path = model_path
-            args_list.append(model_args)
+            model_name = os.path.basename(model_path).split('.')[0]
+            model_dir = os.path.join(args.output_dir, model_name)
+            results[model_path] = analyze_model(model_path, model_dir, args)
         
-        # Compare models
-        compare_models(args_list, args.output_dir)
+        # Create comparison visualizations
+        compare_dir = os.path.join(args.output_dir, "comparison")
+        compare_models(results, compare_dir)
+        
     else:
-        # Single model analysis
-        try:
-            model = load_model(args)
-            evaluate_head_diversity(model, args)
-        except Exception as e:
-            logger.error(f"Error in main analysis workflow: {e}")
-            sys.exit(1)
+        if not args.model_path:
+            logger.error("--model_path is required when not in compare mode")
+            return
+            
+        # Analyze single model
+        analyze_model(args.model_path, args.output_dir, args)
     
     logger.info("Analysis completed successfully")
 
