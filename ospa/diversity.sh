@@ -83,7 +83,7 @@ for model in "${MODEL_FILES[@]}"; do
     python analyze_head_diversity.py \
         --model_path "$model" \
         --output_dir "$model_dir" \
-        --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048
+        --d_model 512 --nhead 8 --nlayers 6
     
     if [ $? -eq 0 ]; then
         log_message "✓ Successfully analyzed $model_name"
@@ -110,7 +110,7 @@ python analyze_head_diversity.py \
     --compare \
     --model_paths $MODEL_PATHS \
     --output_dir "$COMPARE_DIR" \
-    --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048
+    --d_model 512 --nhead 8 --nlayers 6
 
 if [ $? -eq 0 ]; then
     log_message "✓ Comparison analysis completed successfully"
