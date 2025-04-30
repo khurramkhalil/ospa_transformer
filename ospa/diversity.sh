@@ -35,8 +35,8 @@ log_message() {
 }
 
 # Ensure the diversity analysis script exists
-if [ ! -f "diversity_analysis.py" ]; then
-    log_message "ERROR: diversity_analysis.py not found! Please make sure it's in the current directory."
+if [ ! -f "analyze_head_diversity.py" ]; then
+    log_message "ERROR: analyze_head_diversity.py not found! Please make sure it's in the current directory."
     exit 1
 fi
 
@@ -80,7 +80,7 @@ for model in "${MODEL_FILES[@]}"; do
     
     # Analyze each model individually
     log_message "Analyzing model: $model"
-    python diversity_analysis.py \
+    python analyze_head_diversity.py \
         --model_path "$model" \
         --output_dir "$model_dir" \
         --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048
@@ -106,7 +106,7 @@ for model in "${MODEL_FILES[@]}"; do
 done
 
 # Run comparison
-python diversity_analysis.py \
+python analyze_head_diversity.py \
     --compare \
     --model_paths $MODEL_PATHS \
     --output_dir "$COMPARE_DIR" \
