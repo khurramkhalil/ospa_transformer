@@ -1,112 +1,359 @@
-OSPA Diversity Analysis - Job ID: 7847707 - Wed Apr 30 10:27:13 CDT 2025
-[2025-04-30_10:27:13] ✓ Found analysis script: analyze_head_diversity.py
-[2025-04-30_10:27:13] Searching for model files (*.pt) in specified directories...
-[2025-04-30_10:27:13] Searching in: experiments
-[2025-04-30_10:27:13]   Found model: experiments/ospa_init/ospa_init.pt
-[2025-04-30_10:27:13]   Found model: experiments/ospa_regularize/ospa_regularize_medium.pt
-[2025-04-30_10:27:13]   Found model: experiments/ospa_strict/ospa_strict.pt
-[2025-04-30_10:27:13]   Found model: experiments/vanilla/vanilla_transformer.pt
-[2025-04-30_10:27:13] Found 4 model files for analysis.
-[2025-04-30_10:27:13] --- Starting Individual Model Analysis ---
-[2025-04-30_10:27:13] Analyzing: ospa_init
-[2025-04-30_10:27:13]   Outputting to: diversity_analysis_run_7847707/models/ospa_init
+OSPA Diversity Analysis - Job ID: 7847707 - Wed Apr 30 10:32:44 CDT 2025
+[2025-04-30_10:32:44] ✓ Found analysis script: analyze_head_diversity.py
+[2025-04-30_10:32:44] Searching for model files (*.pt) in specified directories...
+[2025-04-30_10:32:44] Searching in: experiments
+[2025-04-30_10:32:44]   Found model: experiments/ospa_init/ospa_init.pt
+[2025-04-30_10:32:44]   Found model: experiments/ospa_regularize/ospa_regularize_medium.pt
+[2025-04-30_10:32:44]   Found model: experiments/ospa_strict/ospa_strict.pt
+[2025-04-30_10:32:44]   Found model: experiments/vanilla/vanilla_transformer.pt
+[2025-04-30_10:32:44] Found 4 model files for analysis.
+[2025-04-30_10:32:44] --- Starting Individual Model Analysis ---
+[2025-04-30_10:32:44] Analyzing: ospa_init
+[2025-04-30_10:32:44]   Outputting to: diversity_analysis_run_7847707/models/ospa_init
 Executing: python "analyze_head_diversity.py"         --model_path "experiments/ospa_init/ospa_init.pt"         --output_dir "diversity_analysis_run_7847707/models/ospa_init"         --d_model 512         --nhead 8         --nlayers 6
-2025-04-30 10:27:15,983 - INFO - Analyzing single model.
-2025-04-30 10:27:15,983 - INFO - --- Analyzing Model: experiments/ospa_init/ospa_init.pt ---
-2025-04-30 10:27:16,062 - INFO - Successfully loaded state dict from experiments/ospa_init/ospa_init.pt
-2025-04-30 10:27:16,062 - INFO - Inferred model type: ospa
-2025-04-30 10:27:16,063 - INFO - Expecting 6 layers based on args.
-2025-04-30 10:27:16,063 - INFO - Successfully extracted all projection weights for layer 0
-2025-04-30 10:27:16,063 - INFO - Successfully extracted all projection weights for layer 1
-2025-04-30 10:27:16,063 - INFO - Successfully extracted all projection weights for layer 2
-2025-04-30 10:27:16,063 - INFO - Successfully extracted all projection weights for layer 3
-2025-04-30 10:27:16,063 - INFO - Successfully extracted all projection weights for layer 4
-2025-04-30 10:27:16,063 - INFO - Successfully extracted all projection weights for layer 5
-2025-04-30 10:27:16,076 - INFO - Generated 48 head vectors across 6 layers.
-2025-04-30 10:27:16,098 - INFO - Checking orthogonality for OSPA model...
-2025-04-30 10:27:16,162 - INFO - Overall Avg Orthogonality Error (Squared Norm): 5.3377e+02
-2025-04-30 10:27:16,167 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/ospa_init/analysis_metrics.json
-2025-04-30 10:27:16,725 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/ospa_init/head_similarity.png
-2025-04-30 10:27:17,340 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/models/ospa_init/orthogonality_error.png
-2025-04-30 10:27:17,340 - INFO - --- Analysis complete for: experiments/ospa_init/ospa_init.pt ---
-2025-04-30 10:27:17,340 - INFO - --- Analysis Script Finished ---
-[2025-04-30_10:27:17] ✓ Successfully analyzed ospa_init
-[2025-04-30_10:27:17] Analyzing: ospa_regularize_medium
-[2025-04-30_10:27:17]   Outputting to: diversity_analysis_run_7847707/models/ospa_regularize_medium
+2025-04-30 10:32:47,071 - INFO - Analyzing single model.
+2025-04-30 10:32:47,071 - INFO - --- Analyzing Model: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:32:47,151 - INFO - Successfully loaded state dict from experiments/ospa_init/ospa_init.pt
+2025-04-30 10:32:47,151 - INFO - Inferred model type: ospa
+2025-04-30 10:32:47,151 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:32:47,151 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:32:47,151 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:32:47,151 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:32:47,151 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:32:47,151 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:32:47,151 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:32:47,163 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:32:47,185 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:32:47,214 - INFO - Overall Avg Orthogonality Error (Squared Norm): 5.3377e+02
+2025-04-30 10:32:47,220 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/ospa_init/analysis_metrics.json
+2025-04-30 10:32:47,767 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/ospa_init/head_similarity.png
+2025-04-30 10:32:48,382 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/models/ospa_init/orthogonality_error.png
+2025-04-30 10:32:48,382 - INFO - --- Analysis complete for: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:32:48,382 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:32:48] ✓ Successfully analyzed ospa_init
+[2025-04-30_10:32:48] Analyzing: ospa_regularize_medium
+[2025-04-30_10:32:48]   Outputting to: diversity_analysis_run_7847707/models/ospa_regularize_medium
 Executing: python "analyze_head_diversity.py"         --model_path "experiments/ospa_regularize/ospa_regularize_medium.pt"         --output_dir "diversity_analysis_run_7847707/models/ospa_regularize_medium"         --d_model 512         --nhead 8         --nlayers 6
-2025-04-30 10:27:20,298 - INFO - Analyzing single model.
-2025-04-30 10:27:20,298 - INFO - --- Analyzing Model: experiments/ospa_regularize/ospa_regularize_medium.pt ---
-2025-04-30 10:27:20,376 - INFO - Successfully loaded state dict from experiments/ospa_regularize/ospa_regularize_medium.pt
-2025-04-30 10:27:20,376 - INFO - Inferred model type: ospa
-2025-04-30 10:27:20,376 - INFO - Expecting 6 layers based on args.
-2025-04-30 10:27:20,376 - INFO - Successfully extracted all projection weights for layer 0
-2025-04-30 10:27:20,377 - INFO - Successfully extracted all projection weights for layer 1
-2025-04-30 10:27:20,377 - INFO - Successfully extracted all projection weights for layer 2
-2025-04-30 10:27:20,377 - INFO - Successfully extracted all projection weights for layer 3
-2025-04-30 10:27:20,377 - INFO - Successfully extracted all projection weights for layer 4
-2025-04-30 10:27:20,377 - INFO - Successfully extracted all projection weights for layer 5
-2025-04-30 10:27:20,402 - INFO - Generated 48 head vectors across 6 layers.
-2025-04-30 10:27:20,423 - INFO - Checking orthogonality for OSPA model...
-2025-04-30 10:27:20,468 - INFO - Overall Avg Orthogonality Error (Squared Norm): 1.3415e-01
-2025-04-30 10:27:20,479 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/ospa_regularize_medium/analysis_metrics.json
-2025-04-30 10:27:21,030 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/ospa_regularize_medium/head_similarity.png
-2025-04-30 10:27:21,663 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/models/ospa_regularize_medium/orthogonality_error.png
-2025-04-30 10:27:21,663 - INFO - --- Analysis complete for: experiments/ospa_regularize/ospa_regularize_medium.pt ---
-2025-04-30 10:27:21,663 - INFO - --- Analysis Script Finished ---
-[2025-04-30_10:27:22] ✓ Successfully analyzed ospa_regularize_medium
-[2025-04-30_10:27:22] Analyzing: ospa_strict
-[2025-04-30_10:27:22]   Outputting to: diversity_analysis_run_7847707/models/ospa_strict
+2025-04-30 10:32:51,303 - INFO - Analyzing single model.
+2025-04-30 10:32:51,303 - INFO - --- Analyzing Model: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:32:51,377 - INFO - Successfully loaded state dict from experiments/ospa_regularize/ospa_regularize_medium.pt
+2025-04-30 10:32:51,378 - INFO - Inferred model type: ospa
+2025-04-30 10:32:51,378 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:32:51,378 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:32:51,378 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:32:51,378 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:32:51,378 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:32:51,378 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:32:51,378 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:32:51,390 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:32:51,411 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:32:51,463 - INFO - Overall Avg Orthogonality Error (Squared Norm): 1.3415e-01
+2025-04-30 10:32:51,478 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/ospa_regularize_medium/analysis_metrics.json
+2025-04-30 10:32:52,030 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/ospa_regularize_medium/head_similarity.png
+2025-04-30 10:32:52,663 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/models/ospa_regularize_medium/orthogonality_error.png
+2025-04-30 10:32:52,663 - INFO - --- Analysis complete for: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:32:52,663 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:32:53] ✓ Successfully analyzed ospa_regularize_medium
+[2025-04-30_10:32:53] Analyzing: ospa_strict
+[2025-04-30_10:32:53]   Outputting to: diversity_analysis_run_7847707/models/ospa_strict
 Executing: python "analyze_head_diversity.py"         --model_path "experiments/ospa_strict/ospa_strict.pt"         --output_dir "diversity_analysis_run_7847707/models/ospa_strict"         --d_model 512         --nhead 8         --nlayers 6
-2025-04-30 10:27:24,596 - INFO - Analyzing single model.
-2025-04-30 10:27:24,596 - INFO - --- Analyzing Model: experiments/ospa_strict/ospa_strict.pt ---
-2025-04-30 10:27:24,677 - INFO - Successfully loaded state dict from experiments/ospa_strict/ospa_strict.pt
-2025-04-30 10:27:24,677 - INFO - Inferred model type: ospa
-2025-04-30 10:27:24,677 - INFO - Expecting 6 layers based on args.
-2025-04-30 10:27:24,677 - INFO - Successfully extracted all projection weights for layer 0
-2025-04-30 10:27:24,677 - INFO - Successfully extracted all projection weights for layer 1
-2025-04-30 10:27:24,677 - INFO - Successfully extracted all projection weights for layer 2
-2025-04-30 10:27:24,677 - INFO - Successfully extracted all projection weights for layer 3
-2025-04-30 10:27:24,677 - INFO - Successfully extracted all projection weights for layer 4
-2025-04-30 10:27:24,677 - INFO - Successfully extracted all projection weights for layer 5
-2025-04-30 10:27:24,689 - INFO - Generated 48 head vectors across 6 layers.
-2025-04-30 10:27:24,711 - INFO - Checking orthogonality for OSPA model...
-2025-04-30 10:27:24,745 - INFO - Overall Avg Orthogonality Error (Squared Norm): 2.8273e-05
-2025-04-30 10:27:24,750 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/ospa_strict/analysis_metrics.json
-2025-04-30 10:27:25,302 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/ospa_strict/head_similarity.png
-2025-04-30 10:27:25,956 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/models/ospa_strict/orthogonality_error.png
-2025-04-30 10:27:25,956 - INFO - --- Analysis complete for: experiments/ospa_strict/ospa_strict.pt ---
-2025-04-30 10:27:25,956 - INFO - --- Analysis Script Finished ---
-[2025-04-30_10:27:26] ✓ Successfully analyzed ospa_strict
-[2025-04-30_10:27:26] Analyzing: vanilla_transformer
-[2025-04-30_10:27:26]   Outputting to: diversity_analysis_run_7847707/models/vanilla_transformer
+2025-04-30 10:32:55,595 - INFO - Analyzing single model.
+2025-04-30 10:32:55,595 - INFO - --- Analyzing Model: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:32:55,673 - INFO - Successfully loaded state dict from experiments/ospa_strict/ospa_strict.pt
+2025-04-30 10:32:55,673 - INFO - Inferred model type: ospa
+2025-04-30 10:32:55,674 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:32:55,674 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:32:55,674 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:32:55,674 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:32:55,674 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:32:55,674 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:32:55,674 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:32:55,697 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:32:55,719 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:32:55,792 - INFO - Overall Avg Orthogonality Error (Squared Norm): 2.8273e-05
+2025-04-30 10:32:55,805 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/ospa_strict/analysis_metrics.json
+2025-04-30 10:32:56,353 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/ospa_strict/head_similarity.png
+2025-04-30 10:32:57,007 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/models/ospa_strict/orthogonality_error.png
+2025-04-30 10:32:57,007 - INFO - --- Analysis complete for: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:32:57,007 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:32:57] ✓ Successfully analyzed ospa_strict
+[2025-04-30_10:32:57] Analyzing: vanilla_transformer
+[2025-04-30_10:32:57]   Outputting to: diversity_analysis_run_7847707/models/vanilla_transformer
 Executing: python "analyze_head_diversity.py"         --model_path "experiments/vanilla/vanilla_transformer.pt"         --output_dir "diversity_analysis_run_7847707/models/vanilla_transformer"         --d_model 512         --nhead 8         --nlayers 6
-2025-04-30 10:27:28,864 - INFO - Analyzing single model.
-2025-04-30 10:27:28,864 - INFO - --- Analyzing Model: experiments/vanilla/vanilla_transformer.pt ---
-2025-04-30 10:27:28,943 - INFO - Successfully loaded state dict from experiments/vanilla/vanilla_transformer.pt
-2025-04-30 10:27:28,943 - INFO - Inferred model type: vanilla
-2025-04-30 10:27:28,944 - INFO - Expecting 6 layers based on args.
-2025-04-30 10:27:28,944 - INFO - Successfully extracted all projection weights for layer 0
-2025-04-30 10:27:28,944 - INFO - Successfully extracted all projection weights for layer 1
-2025-04-30 10:27:28,944 - INFO - Successfully extracted all projection weights for layer 2
-2025-04-30 10:27:28,944 - INFO - Successfully extracted all projection weights for layer 3
-2025-04-30 10:27:28,944 - INFO - Successfully extracted all projection weights for layer 4
-2025-04-30 10:27:28,944 - INFO - Successfully extracted all projection weights for layer 5
-2025-04-30 10:27:28,968 - INFO - Generated 48 head vectors across 6 layers.
-2025-04-30 10:27:29,004 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/vanilla_transformer/analysis_metrics.json
-2025-04-30 10:27:29,555 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/vanilla_transformer/head_similarity.png
-2025-04-30 10:27:29,555 - INFO - --- Analysis complete for: experiments/vanilla/vanilla_transformer.pt ---
-2025-04-30 10:27:29,556 - INFO - --- Analysis Script Finished ---
-[2025-04-30_10:27:30] ✓ Successfully analyzed vanilla_transformer
-[2025-04-30_10:27:30] Individual analysis complete. Success: 4, Failed: 0.
-[2025-04-30_10:27:30] --- Starting Comparison Analysis ---
-[2025-04-30_10:27:30] Executing Comparison Command:
-python "analyze_head_diversity.py"         --model_paths "experiments/ospa_init/ospa_init.pt experiments/ospa_regularize/ospa_regularize_medium.pt experiments/ospa_strict/ospa_strict.pt experiments/vanilla/vanilla_transformer.pt"         --output_dir "diversity_analysis_run_7847707/comparison"         --d_model 512         --nhead 8         --nlayers 6
-usage: analyze_head_diversity.py [-h] [--model_path MODEL_PATH]
-                                 [--model_paths MODEL_PATHS [MODEL_PATHS ...]]
-                                 [--output_dir OUTPUT_DIR] --d_model D_MODEL
-                                 --nhead NHEAD --nlayers NLAYERS
-analyze_head_diversity.py: error: --model_paths requires at least two model paths for comparison.
-[2025-04-30_10:27:32] ✗ Comparison analysis failed.
-[2025-04-30_10:27:32] ===================================================
-[2025-04-30_10:27:32] Analysis Job Completed at: Wed Apr 30 10:27:32 CDT 2025
-[2025-04-30_10:27:32] Results saved in: diversity_analysis_run_7847707
+2025-04-30 10:32:59,960 - INFO - Analyzing single model.
+2025-04-30 10:32:59,960 - INFO - --- Analyzing Model: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:00,039 - INFO - Successfully loaded state dict from experiments/vanilla/vanilla_transformer.pt
+2025-04-30 10:33:00,039 - INFO - Inferred model type: vanilla
+2025-04-30 10:33:00,039 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:00,039 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:00,039 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:00,039 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:00,039 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:00,039 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:00,039 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:00,065 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:00,098 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/models/vanilla_transformer/analysis_metrics.json
+2025-04-30 10:33:00,649 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/models/vanilla_transformer/head_similarity.png
+2025-04-30 10:33:00,649 - INFO - --- Analysis complete for: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:00,650 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:01] ✓ Successfully analyzed vanilla_transformer
+[2025-04-30_10:33:01] Individual analysis complete. Success: 4, Failed: 0.
+[2025-04-30_10:33:01] --- Starting Pairwise Comparison Analysis ---
+[2025-04-30_10:33:01] Comparing: ospa_init vs ospa_regularize_medium
+[2025-04-30_10:33:01]   Outputting to: diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium
+Executing: python analyze_head_diversity.py --model_paths experiments/ospa_init/ospa_init.pt experiments/ospa_regularize/ospa_regularize_medium.pt --output_dir diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium --d_model 512 --nhead 8 --nlayers 6
+2025-04-30 10:33:03,612 - INFO - Comparing 2 models.
+2025-04-30 10:33:03,612 - INFO - --- Analyzing Model: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:33:03,700 - INFO - Successfully loaded state dict from experiments/ospa_init/ospa_init.pt
+2025-04-30 10:33:03,700 - INFO - Inferred model type: ospa
+2025-04-30 10:33:03,700 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:03,700 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:03,700 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:03,700 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:03,700 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:03,700 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:03,700 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:03,714 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:03,736 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:03,763 - INFO - Overall Avg Orthogonality Error (Squared Norm): 5.3377e+02
+2025-04-30 10:33:03,768 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/ospa_init/analysis_metrics.json
+2025-04-30 10:33:04,315 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/ospa_init/head_similarity.png
+2025-04-30 10:33:04,932 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/ospa_init/orthogonality_error.png
+2025-04-30 10:33:04,932 - INFO - --- Analysis complete for: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:33:04,932 - INFO - --- Analyzing Model: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:33:05,008 - INFO - Successfully loaded state dict from experiments/ospa_regularize/ospa_regularize_medium.pt
+2025-04-30 10:33:05,008 - INFO - Inferred model type: ospa
+2025-04-30 10:33:05,008 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:05,008 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:05,008 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:05,008 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:05,008 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:05,008 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:05,008 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:05,020 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:05,041 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:05,056 - INFO - Overall Avg Orthogonality Error (Squared Norm): 1.3415e-01
+2025-04-30 10:33:05,064 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/ospa_regularize_medium/analysis_metrics.json
+2025-04-30 10:33:05,606 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/ospa_regularize_medium/head_similarity.png
+2025-04-30 10:33:06,203 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/ospa_regularize_medium/orthogonality_error.png
+2025-04-30 10:33:06,203 - INFO - --- Analysis complete for: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:33:06,204 - INFO - --- Creating Comparison Visualizations for 2 Models ---
+2025-04-30 10:33:06,513 - INFO - Saved diversity comparison plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/model_diversity_comparison.png
+2025-04-30 10:33:06,523 - INFO - Saved comparison data to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_regularize_medium/diversity_comparison_data.json
+2025-04-30 10:33:06,523 - INFO - --- Model Comparison Complete ---
+2025-04-30 10:33:06,524 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:06] ✓ Comparison ospa_init vs ospa_regularize_medium completed successfully.
+[2025-04-30_10:33:07] Comparing: ospa_init vs ospa_strict
+[2025-04-30_10:33:07]   Outputting to: diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict
+Executing: python analyze_head_diversity.py --model_paths experiments/ospa_init/ospa_init.pt experiments/ospa_strict/ospa_strict.pt --output_dir diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict --d_model 512 --nhead 8 --nlayers 6
+2025-04-30 10:33:09,472 - INFO - Comparing 2 models.
+2025-04-30 10:33:09,472 - INFO - --- Analyzing Model: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:33:09,560 - INFO - Successfully loaded state dict from experiments/ospa_init/ospa_init.pt
+2025-04-30 10:33:09,560 - INFO - Inferred model type: ospa
+2025-04-30 10:33:09,560 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:09,560 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:09,560 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:09,560 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:09,560 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:09,560 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:09,560 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:09,586 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:09,608 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:09,655 - INFO - Overall Avg Orthogonality Error (Squared Norm): 5.3377e+02
+2025-04-30 10:33:09,660 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/ospa_init/analysis_metrics.json
+2025-04-30 10:33:10,202 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/ospa_init/head_similarity.png
+2025-04-30 10:33:10,813 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/ospa_init/orthogonality_error.png
+2025-04-30 10:33:10,813 - INFO - --- Analysis complete for: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:33:10,813 - INFO - --- Analyzing Model: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:33:10,890 - INFO - Successfully loaded state dict from experiments/ospa_strict/ospa_strict.pt
+2025-04-30 10:33:10,890 - INFO - Inferred model type: ospa
+2025-04-30 10:33:10,890 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:10,890 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:10,890 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:10,890 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:10,890 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:10,890 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:10,890 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:10,900 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:10,921 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:10,953 - INFO - Overall Avg Orthogonality Error (Squared Norm): 2.8273e-05
+2025-04-30 10:33:10,958 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/ospa_strict/analysis_metrics.json
+2025-04-30 10:33:11,487 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/ospa_strict/head_similarity.png
+2025-04-30 10:33:12,115 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/ospa_strict/orthogonality_error.png
+2025-04-30 10:33:12,115 - INFO - --- Analysis complete for: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:33:12,115 - INFO - --- Creating Comparison Visualizations for 2 Models ---
+2025-04-30 10:33:12,441 - INFO - Saved diversity comparison plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/model_diversity_comparison.png
+2025-04-30 10:33:12,446 - INFO - Saved comparison data to diversity_analysis_run_7847707/comparison/ospa_init_vs_ospa_strict/diversity_comparison_data.json
+2025-04-30 10:33:12,446 - INFO - --- Model Comparison Complete ---
+2025-04-30 10:33:12,446 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:12] ✓ Comparison ospa_init vs ospa_strict completed successfully.
+[2025-04-30_10:33:12] Comparing: ospa_init vs vanilla_transformer
+[2025-04-30_10:33:12]   Outputting to: diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer
+Executing: python analyze_head_diversity.py --model_paths experiments/ospa_init/ospa_init.pt experiments/vanilla/vanilla_transformer.pt --output_dir diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer --d_model 512 --nhead 8 --nlayers 6
+2025-04-30 10:33:15,407 - INFO - Comparing 2 models.
+2025-04-30 10:33:15,408 - INFO - --- Analyzing Model: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:33:15,511 - INFO - Successfully loaded state dict from experiments/ospa_init/ospa_init.pt
+2025-04-30 10:33:15,511 - INFO - Inferred model type: ospa
+2025-04-30 10:33:15,511 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:15,511 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:15,511 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:15,511 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:15,511 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:15,512 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:15,512 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:15,523 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:15,546 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:15,578 - INFO - Overall Avg Orthogonality Error (Squared Norm): 5.3377e+02
+2025-04-30 10:33:15,588 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/ospa_init/analysis_metrics.json
+2025-04-30 10:33:16,139 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/ospa_init/head_similarity.png
+2025-04-30 10:33:16,753 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/ospa_init/orthogonality_error.png
+2025-04-30 10:33:16,753 - INFO - --- Analysis complete for: experiments/ospa_init/ospa_init.pt ---
+2025-04-30 10:33:16,753 - INFO - --- Analyzing Model: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:16,834 - INFO - Successfully loaded state dict from experiments/vanilla/vanilla_transformer.pt
+2025-04-30 10:33:16,834 - INFO - Inferred model type: vanilla
+2025-04-30 10:33:16,834 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:16,834 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:16,834 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:16,834 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:16,834 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:16,834 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:16,834 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:16,844 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:16,876 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/vanilla_transformer/analysis_metrics.json
+2025-04-30 10:33:17,407 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/vanilla_transformer/head_similarity.png
+2025-04-30 10:33:17,407 - INFO - --- Analysis complete for: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:17,407 - INFO - --- Creating Comparison Visualizations for 2 Models ---
+2025-04-30 10:33:17,716 - INFO - Saved diversity comparison plot to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/model_diversity_comparison.png
+2025-04-30 10:33:17,720 - INFO - Saved comparison data to diversity_analysis_run_7847707/comparison/ospa_init_vs_vanilla_transformer/diversity_comparison_data.json
+2025-04-30 10:33:17,720 - INFO - --- Model Comparison Complete ---
+2025-04-30 10:33:17,720 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:18] ✓ Comparison ospa_init vs vanilla_transformer completed successfully.
+[2025-04-30_10:33:18] Comparing: ospa_regularize_medium vs ospa_strict
+[2025-04-30_10:33:18]   Outputting to: diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict
+Executing: python analyze_head_diversity.py --model_paths experiments/ospa_regularize/ospa_regularize_medium.pt experiments/ospa_strict/ospa_strict.pt --output_dir diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict --d_model 512 --nhead 8 --nlayers 6
+2025-04-30 10:33:20,706 - INFO - Comparing 2 models.
+2025-04-30 10:33:20,706 - INFO - --- Analyzing Model: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:33:20,787 - INFO - Successfully loaded state dict from experiments/ospa_regularize/ospa_regularize_medium.pt
+2025-04-30 10:33:20,787 - INFO - Inferred model type: ospa
+2025-04-30 10:33:20,787 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:20,787 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:20,787 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:20,787 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:20,787 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:20,787 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:20,787 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:20,801 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:20,822 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:20,918 - INFO - Overall Avg Orthogonality Error (Squared Norm): 1.3415e-01
+2025-04-30 10:33:20,930 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/ospa_regularize_medium/analysis_metrics.json
+2025-04-30 10:33:21,486 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/ospa_regularize_medium/head_similarity.png
+2025-04-30 10:33:22,114 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/ospa_regularize_medium/orthogonality_error.png
+2025-04-30 10:33:22,114 - INFO - --- Analysis complete for: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:33:22,114 - INFO - --- Analyzing Model: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:33:22,191 - INFO - Successfully loaded state dict from experiments/ospa_strict/ospa_strict.pt
+2025-04-30 10:33:22,191 - INFO - Inferred model type: ospa
+2025-04-30 10:33:22,191 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:22,191 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:22,191 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:22,191 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:22,191 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:22,191 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:22,191 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:22,201 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:22,222 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:22,243 - INFO - Overall Avg Orthogonality Error (Squared Norm): 2.8273e-05
+2025-04-30 10:33:22,249 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/ospa_strict/analysis_metrics.json
+2025-04-30 10:33:22,785 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/ospa_strict/head_similarity.png
+2025-04-30 10:33:23,404 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/ospa_strict/orthogonality_error.png
+2025-04-30 10:33:23,404 - INFO - --- Analysis complete for: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:33:23,404 - INFO - --- Creating Comparison Visualizations for 2 Models ---
+2025-04-30 10:33:23,735 - INFO - Saved diversity comparison plot to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/model_diversity_comparison.png
+2025-04-30 10:33:23,741 - INFO - Saved comparison data to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_ospa_strict/diversity_comparison_data.json
+2025-04-30 10:33:23,741 - INFO - --- Model Comparison Complete ---
+2025-04-30 10:33:23,741 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:24] ✓ Comparison ospa_regularize_medium vs ospa_strict completed successfully.
+[2025-04-30_10:33:24] Comparing: ospa_regularize_medium vs vanilla_transformer
+[2025-04-30_10:33:24]   Outputting to: diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer
+Executing: python analyze_head_diversity.py --model_paths experiments/ospa_regularize/ospa_regularize_medium.pt experiments/vanilla/vanilla_transformer.pt --output_dir diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer --d_model 512 --nhead 8 --nlayers 6
+2025-04-30 10:33:26,676 - INFO - Comparing 2 models.
+2025-04-30 10:33:26,676 - INFO - --- Analyzing Model: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:33:26,759 - INFO - Successfully loaded state dict from experiments/ospa_regularize/ospa_regularize_medium.pt
+2025-04-30 10:33:26,759 - INFO - Inferred model type: ospa
+2025-04-30 10:33:26,759 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:26,759 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:26,759 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:26,759 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:26,759 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:26,759 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:26,759 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:26,773 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:26,795 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:26,823 - INFO - Overall Avg Orthogonality Error (Squared Norm): 1.3415e-01
+2025-04-30 10:33:26,836 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/ospa_regularize_medium/analysis_metrics.json
+2025-04-30 10:33:27,387 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/ospa_regularize_medium/head_similarity.png
+2025-04-30 10:33:28,015 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/ospa_regularize_medium/orthogonality_error.png
+2025-04-30 10:33:28,015 - INFO - --- Analysis complete for: experiments/ospa_regularize/ospa_regularize_medium.pt ---
+2025-04-30 10:33:28,015 - INFO - --- Analyzing Model: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:28,099 - INFO - Successfully loaded state dict from experiments/vanilla/vanilla_transformer.pt
+2025-04-30 10:33:28,099 - INFO - Inferred model type: vanilla
+2025-04-30 10:33:28,099 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:28,099 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:28,099 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:28,099 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:28,099 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:28,099 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:28,099 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:28,108 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:28,135 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/vanilla_transformer/analysis_metrics.json
+2025-04-30 10:33:28,667 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/vanilla_transformer/head_similarity.png
+2025-04-30 10:33:28,667 - INFO - --- Analysis complete for: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:28,668 - INFO - --- Creating Comparison Visualizations for 2 Models ---
+2025-04-30 10:33:28,982 - INFO - Saved diversity comparison plot to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/model_diversity_comparison.png
+2025-04-30 10:33:28,987 - INFO - Saved comparison data to diversity_analysis_run_7847707/comparison/ospa_regularize_medium_vs_vanilla_transformer/diversity_comparison_data.json
+2025-04-30 10:33:28,987 - INFO - --- Model Comparison Complete ---
+2025-04-30 10:33:28,987 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:29] ✓ Comparison ospa_regularize_medium vs vanilla_transformer completed successfully.
+[2025-04-30_10:33:29] Comparing: ospa_strict vs vanilla_transformer
+[2025-04-30_10:33:29]   Outputting to: diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer
+Executing: python analyze_head_diversity.py --model_paths experiments/ospa_strict/ospa_strict.pt experiments/vanilla/vanilla_transformer.pt --output_dir diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer --d_model 512 --nhead 8 --nlayers 6
+2025-04-30 10:33:31,916 - INFO - Comparing 2 models.
+2025-04-30 10:33:31,916 - INFO - --- Analyzing Model: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:33:32,000 - INFO - Successfully loaded state dict from experiments/ospa_strict/ospa_strict.pt
+2025-04-30 10:33:32,000 - INFO - Inferred model type: ospa
+2025-04-30 10:33:32,000 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:32,000 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:32,000 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:32,000 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:32,000 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:32,000 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:32,000 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:32,012 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:32,034 - INFO - Checking orthogonality for OSPA model...
+2025-04-30 10:33:32,067 - INFO - Overall Avg Orthogonality Error (Squared Norm): 2.8273e-05
+2025-04-30 10:33:32,071 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/ospa_strict/analysis_metrics.json
+2025-04-30 10:33:32,618 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/ospa_strict/head_similarity.png
+2025-04-30 10:33:33,275 - INFO - Saved orthogonality error plot to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/ospa_strict/orthogonality_error.png
+2025-04-30 10:33:33,275 - INFO - --- Analysis complete for: experiments/ospa_strict/ospa_strict.pt ---
+2025-04-30 10:33:33,275 - INFO - --- Analyzing Model: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:33,350 - INFO - Successfully loaded state dict from experiments/vanilla/vanilla_transformer.pt
+2025-04-30 10:33:33,350 - INFO - Inferred model type: vanilla
+2025-04-30 10:33:33,351 - INFO - Expecting 6 layers based on args.
+2025-04-30 10:33:33,351 - INFO - Successfully extracted all projection weights for layer 0
+2025-04-30 10:33:33,351 - INFO - Successfully extracted all projection weights for layer 1
+2025-04-30 10:33:33,351 - INFO - Successfully extracted all projection weights for layer 2
+2025-04-30 10:33:33,351 - INFO - Successfully extracted all projection weights for layer 3
+2025-04-30 10:33:33,351 - INFO - Successfully extracted all projection weights for layer 4
+2025-04-30 10:33:33,351 - INFO - Successfully extracted all projection weights for layer 5
+2025-04-30 10:33:33,360 - INFO - Generated 48 head vectors across 6 layers.
+2025-04-30 10:33:33,386 - INFO - Saved analysis metrics to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/vanilla_transformer/analysis_metrics.json
+2025-04-30 10:33:33,917 - INFO - Saved head similarity heatmap to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/vanilla_transformer/head_similarity.png
+2025-04-30 10:33:33,917 - INFO - --- Analysis complete for: experiments/vanilla/vanilla_transformer.pt ---
+2025-04-30 10:33:33,918 - INFO - --- Creating Comparison Visualizations for 2 Models ---
+2025-04-30 10:33:34,234 - INFO - Saved diversity comparison plot to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/model_diversity_comparison.png
+2025-04-30 10:33:34,237 - INFO - Saved comparison data to diversity_analysis_run_7847707/comparison/ospa_strict_vs_vanilla_transformer/diversity_comparison_data.json
+2025-04-30 10:33:34,237 - INFO - --- Model Comparison Complete ---
+2025-04-30 10:33:34,237 - INFO - --- Analysis Script Finished ---
+[2025-04-30_10:33:34] ✓ Comparison ospa_strict vs vanilla_transformer completed successfully.
+[2025-04-30_10:33:34] ===================================================
+[2025-04-30_10:33:34] Analysis Job Completed at: Wed Apr 30 10:33:34 CDT 2025
+[2025-04-30_10:33:34] Results saved in: diversity_analysis_run_7847707

@@ -1,0 +1,10 @@
+{
+  "model_type": "vanilla",
+  "model_path": "experiments/vanilla/vanilla_transformer.pt",
+  "diversity_score": -4.348518155145307e-05,
+  "num_layers_extracted": 6,
+  "num_heads_total": 48,
+  "args_nhead": 8,
+  "args_d_model": 512,
+  "orthogonality_scores": null
+}

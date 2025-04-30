@@ -1,0 +1,12 @@
+[
+  {
+    "name": "vanilla",
+    "diversity": -4.348518155145307e-05,
+    "type": "vanilla"
+  },
+  {
+    "name": "ospa_init",
+    "diversity": 1.358816809688054e-05,
+    "type": "ospa"
+  }
+]
