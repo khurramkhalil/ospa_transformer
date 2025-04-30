@@ -1,13 +1,17 @@
 #!/bin/bash
 #SBATCH --partition=rss-gpu
 #SBATCH -N 1
-#SBATCH -c 8
-#SBATCH --mem 32G
-#SBATCH --gres=gpu:1
+#SBATCH -c 16
+#SBATCH --mem 50G
+#SBATCH --gres=gpu:A100:1
 #SBATCH --export=all
-#SBATCH --out=OSPA_Diversity_Analysis-%j.out
-#SBATCH --time=6:00:00
+#SBATCH --out=OSPA_Fixed-%j.out
+#SBATCH --output=OSPA_Diversity_Analysis-%j_outout.txt
+#SBATCH --error=OSPA_Diversity_Analysis-%j_err.txt
+#SBATCH --time=72:00:00
 #SBATCH --job-name=OSPA_Diversity
+#SBATCH --mail-user=khurram.khalil@missouri.edu
+#SBATCH --mail-type=ALL
 
 # Load required modules
 module load miniconda3/4.10.3_gcc_9.5.0
