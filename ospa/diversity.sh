@@ -118,7 +118,7 @@ for model_path in "${MODEL_FILES[@]}"; do
         --output_dir \"$model_output_dir\" \
         --d_model $D_MODEL \
         --nhead $NHEAD \
-        --nlayers $NLAYERS \
+        --nlayers $NLAYERS
 
     # Execute and log
     echo "Executing: $cmd" >> $LOG_FILE
@@ -147,7 +147,7 @@ else
         --output_dir \"$COMPARISON_OUTPUT_DIR\" \
         --d_model $D_MODEL \
         --nhead $NHEAD \
-        --nlayers $NLAYERS \
+        --nlayers $NLAYERS
 
     log_message "Executing Comparison Command:"
     echo "$cmd_compare" >> $LOG_FILE # Log the command
