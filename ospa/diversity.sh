@@ -132,32 +132,42 @@ for model_path in "${MODEL_FILES[@]}"; do
 done
 log_message "Individual analysis complete. Success: $SUCCESS_COUNT, Failed: $FAIL_COUNT."
 
-# --- Comparison Analysis ---
-if [ $SUCCESS_COUNT -lt 2 ]; then
-    log_message "Skipping comparison analysis: Fewer than 2 models successfully analyzed."
-else
-    log_message "--- Starting Comparison Analysis ---"
-    COMPARISON_OUTPUT_DIR="$ANALYSIS_BASE_DIR/comparison"
-    mkdir -p "$COMPARISON_OUTPUT_DIR"
+log_message "--- Starting Pairwise Comparison Analysis ---"
+COMPARISON_OUTPUT_DIR="$ANALYSIS_BASE_DIR/comparison"
+mkdir -p "$COMPARISON_OUTPUT_DIR"
 
-    # Pass the list of successfully analyzed model paths directly to the script
-    # The "${MODEL_FILES[@]}" syntax handles spaces in paths correctly.
-    cmd_compare="python \"$ANALYSIS_SCRIPT\" \
-        --model_paths \"${MODEL_FILES[@]}\" \
-        --output_dir \"$COMPARISON_OUTPUT_DIR\" \
-        --d_model $D_MODEL \
-        --nhead $NHEAD \
-        --nlayers $NLAYERS"
+# Loop through all unique pairs of models for comparison
+for ((i=0; i<${#MODEL_FILES[@]}; i++)); do
+    for ((j=i+1; j<${#MODEL_FILES[@]}; j++)); do
+        model1="${MODEL_FILES[$i]}"
+        model2="${MODEL_FILES[$j]}"
+        
+        name1=$(basename "$model1" .pt | tr -cd '[:alnum:]_-')
+        name2=$(basename "$model2" .pt | tr -cd '[:alnum:]_-')
+        pair_output_dir="$COMPARISON_OUTPUT_DIR/${name1}_vs_${name2}"
+        mkdir -p "$pair_output_dir"
 
-    log_message "Executing Comparison Command:"
-    echo "$cmd_compare" >> $LOG_FILE # Log the command
+        log_message "Comparing: $name1 vs $name2"
+        log_message "  Outputting to: $pair_output_dir"
 
-    if eval $cmd_compare >> $LOG_FILE 2>&1; then
-        log_message "✓ Comparison analysis completed successfully."
-    else
-        log_message "✗ Comparison analysis failed."
-    fi
-fi
+        cmd_compare=(
+            python "$ANALYSIS_SCRIPT"
+            --model_paths "$model1" "$model2"
+            --output_dir "$pair_output_dir"
+            --d_model "$D_MODEL"
+            --nhead "$NHEAD"
+            --nlayers "$NLAYERS"
+        )
+
+        echo "Executing: ${cmd_compare[*]}" >> $LOG_FILE
+        if "${cmd_compare[@]}" >> $LOG_FILE 2>&1; then
+            log_message "✓ Comparison $name1 vs $name2 completed successfully."
+        else
+            log_message "✗ Comparison $name1 vs $name2 failed."
+        fi
+    done
+done
+
 
 log_message "==================================================="
 log_message "Analysis Job Completed at: $(date)"
