@@ -119,7 +119,6 @@ for model_path in "${MODEL_FILES[@]}"; do
         --d_model $D_MODEL \
         --nhead $NHEAD \
         --nlayers $NLAYERS \
-        --device cpu" # Explicitly run on CPU unless GPU is needed
 
     # Execute and log
     echo "Executing: $cmd" >> $LOG_FILE
@@ -149,7 +148,6 @@ else
         --d_model $D_MODEL \
         --nhead $NHEAD \
         --nlayers $NLAYERS \
-        --device cpu" # Explicitly run on CPU
 
     log_message "Executing Comparison Command:"
     echo "$cmd_compare" >> $LOG_FILE # Log the command
