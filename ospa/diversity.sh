@@ -1,187 +1,169 @@
 #!/bin/bash
-#SBATCH --partition=rss-gpu
-#SBATCH -N 1
-#SBATCH -c 16
-#SBATCH --mem 50G
-#SBATCH --gres=gpu:A100:1
+#SBATCH --partition=rss-gpu       # Or your GPU partition
+#SBATCH -N 1                      # Number of nodes
+#SBATCH -c 16                     # Number of CPU cores per task (adjust if needed)
+#SBATCH --mem 50G                 # Memory per node
+#SBATCH --gres=gpu:A100:1         # Request 1 A100 GPU (REMOVE if analysis is CPU-only)
 #SBATCH --export=all
-#SBATCH --out=OSPA_Fixed-%j.out
-#SBATCH --output=OSPA_Diversity_Analysis-%j_outout.txt
-#SBATCH --error=OSPA_Diversity_Analysis-%j_err.txt
-#SBATCH --time=72:00:00
-#SBATCH --job-name=OSPA_Diversity
-#SBATCH --mail-user=khurram.khalil@missouri.edu
-#SBATCH --mail-type=ALL
+#SBATCH --job-name=OSPA_Diversity_Analysis # Clearer job name
+#SBATCH --output=logs/OSPA_Diversity_Analysis_%j_output.txt # Corrected typo, added logs/ subdir
+#SBATCH --error=logs/OSPA_Diversity_Analysis_%j_error.txt  # Added logs/ subdir
+#SBATCH --time=12:00:00           # Reduced time if analysis is faster than training
+#SBATCH --mail-user=khurram.khalil@missouri.edu # Your email
+#SBATCH --mail-type=FAIL,END      # Notify on failure or completion
 
-# Load required modules
+# --- Environment Setup ---
+# Exit immediately if a command exits with a non-zero status.
+set -e
+# Treat unset variables as an error when substituting.
+set -u
+# Pipelines fail if any command fails, not just the last one.
+set -o pipefail
+
+# Load required modules (adjust path/version if needed)
 module load miniconda3/4.10.3_gcc_9.5.0
-source activate deepseek
+# Activate your conda environment
+source activate deepseek # Replace 'deepseek' with your actual environment name
 
-echo "================ OSPA HEAD DIVERSITY ANALYSIS ================"
-echo "Starting at: $(date)"
+echo "==================================================="
+echo "        OSPA HEAD DIVERSITY ANALYSIS JOB           "
+echo "==================================================="
+echo "Job ID: $SLURM_JOB_ID"
 echo "Running on host: $(hostname)"
+echo "Started at: $(date)"
+echo "==================================================="
 
-# Create output directory
-ANALYSIS_DIR="diversity_analysis"
-mkdir -p $ANALYSIS_DIR
-
-# Create a log file
-LOG_FILE="$ANALYSIS_DIR/analysis.log"
-echo "OSPA Diversity Analysis - $(date)" > $LOG_FILE
-
-# Function to log messages to both console and log file
-log_message() {
-    echo "[$(date +%H:%M:%S)] $1" | tee -a $LOG_FILE
-}
-
-# Ensure the diversity analysis script exists
-if [ ! -f "analyze_head_diversity.py" ]; then
-    log_message "ERROR: analyze_head_diversity.py not found! Please make sure it's in the current directory."
-    exit 1
-fi
-
-# Find all available model files
-log_message "Searching for model files..."
-
-# Add all directories to search for models
+# --- Configuration ---
+# ** IMPORTANT: Set these to match the models you are analyzing **
+D_MODEL=512
+NHEAD=8
+NLAYERS=6
+# Analysis script filename (VERIFY THIS NAME)
+ANALYSIS_SCRIPT="analyze_head_diversity.py"
+# Base directory for analysis outputs
+ANALYSIS_BASE_DIR="diversity_analysis_run_${SLURM_JOB_ID}"
+# Directories to search for model checkpoints
 SEARCH_DIRS=(
-    # "experiments_old"
-    "experiments"
-    # "outputs"
+    "experiments" # Assumes models are in subdirs like experiments/vanilla, experiments/ospa_init etc.
+    # Add other parent directories if needed, e.g., "outputs"
 )
 
-# Find all .pt files in the search directories
-MODEL_FILES=()
-for dir in "${SEARCH_DIRS[@]}"; do
-    if [ -d "$dir" ]; then
-        for file in $(find "$dir" -name "*.pt" -type f); do
-            # Skip files that might be temp files or backups
-            if [[ "$file" != *"temp"* ]] && [[ "$file" != *"backup"* ]]; then
-                MODEL_FILES+=("$file")
-                log_message "Found model: $file"
-            fi
-        done
-    fi
-done
+# --- Directory Setup ---
+mkdir -p "$ANALYSIS_BASE_DIR"
+mkdir -p "$ANALYSIS_BASE_DIR/models" # Subdir for individual model results
+mkdir -p "$ANALYSIS_BASE_DIR/comparison" # Subdir for comparison results
+mkdir -p logs # Ensure logs directory exists for SLURM output
 
-# Check if we found any models
-if [ ${#MODEL_FILES[@]} -eq 0 ]; then
-    log_message "ERROR: No model files found!"
+# Log file for this analysis run
+LOG_FILE="$ANALYSIS_BASE_DIR/analysis_progress.log"
+echo "OSPA Diversity Analysis - Job ID: $SLURM_JOB_ID - $(date)" > $LOG_FILE
+
+# Function to log messages
+log_message() {
+    echo "[$(date +%Y-%m-%d_%H:%M:%S)] $1" | tee -a $LOG_FILE
+}
+
+# --- Script Verification ---
+if [ ! -f "$ANALYSIS_SCRIPT" ]; then
+    log_message "ERROR: Analysis script '$ANALYSIS_SCRIPT' not found! Please ensure it's in the current directory or provide the correct path."
     exit 1
 fi
+log_message "✓ Found analysis script: $ANALYSIS_SCRIPT"
 
-log_message "Found ${#MODEL_FILES[@]} model files for analysis"
-
-# Create individual analysis directories
-for model in "${MODEL_FILES[@]}"; do
-    model_name=$(basename "$model" .pt)
-    model_dir="$ANALYSIS_DIR/models/$model_name"
-    mkdir -p "$model_dir"
-    
-    # Analyze each model individually
-    log_message "Analyzing model: $model"
-    python analyze_head_diversity.py \
-        --model_path "$model" \
-        --output_dir "$model_dir" \
-        --d_model 512 --nhead 8 --nlayers 6
-    
-    if [ $? -eq 0 ]; then
-        log_message "✓ Successfully analyzed $model_name"
+# --- Find Model Files ---
+log_message "Searching for model files (*.pt) in specified directories..."
+MODEL_FILES=()
+for search_dir in "${SEARCH_DIRS[@]}"; do
+    if [ -d "$search_dir" ]; then
+        log_message "Searching in: $search_dir"
+        # Use find -print0 and read -d $'\0' for safer handling of filenames with special characters
+        while IFS= read -r -d $'\0' file; do
+            # Basic filtering (can be made more specific)
+            if [[ "$file" == *.pt ]] && [[ "$file" != *"error_checkpoint"* ]] && [[ "$file" != *"backup"* ]]; then
+                MODEL_FILES+=("$file")
+                log_message "  Found model: $file"
+            fi
+        done < <(find "$search_dir" -name "*.pt" -type f -print0)
     else
-        log_message "✗ Failed to analyze $model_name"
+        log_message "Warning: Search directory not found: $search_dir"
     fi
 done
 
-# Create comparison directory
-COMPARE_DIR="$ANALYSIS_DIR/comparison"
-mkdir -p "$COMPARE_DIR"
+# Check if any models were found
+if [ ${#MODEL_FILES[@]} -eq 0 ]; then
+    log_message "ERROR: No model files (.pt) found in the specified search directories!"
+    exit 1
+fi
+log_message "Found ${#MODEL_FILES[@]} model files for analysis."
 
-# Run comparison analysis on all models
-log_message "Running comparison analysis on all models"
+# --- Individual Model Analysis ---
+log_message "--- Starting Individual Model Analysis ---"
+ANALYSIS_RESULTS_DIR="$ANALYSIS_BASE_DIR/models"
+SUCCESS_COUNT=0
+FAIL_COUNT=0
 
-# Convert array to space-separated string for command line
-MODEL_PATHS=""
-for model in "${MODEL_FILES[@]}"; do
-    MODEL_PATHS="$MODEL_PATHS $model"
+for model_path in "${MODEL_FILES[@]}"; do
+    model_name=$(basename "$model_path" .pt)
+    # Sanitize model name for directory usage if needed (e.g., replace special chars)
+    safe_model_name=$(echo "$model_name" | tr -cd '[:alnum:]_-')
+    model_output_dir="$ANALYSIS_RESULTS_DIR/$safe_model_name"
+    mkdir -p "$model_output_dir"
+
+    log_message "Analyzing: $model_name"
+    log_message "  Outputting to: $model_output_dir"
+
+    # Define the command for individual analysis
+    cmd="python \"$ANALYSIS_SCRIPT\" \
+        --model_path \"$model_path\" \
+        --output_dir \"$model_output_dir\" \
+        --d_model $D_MODEL \
+        --nhead $NHEAD \
+        --nlayers $NLAYERS \
+        --device cpu" # Explicitly run on CPU unless GPU is needed
+
+    # Execute and log
+    echo "Executing: $cmd" >> $LOG_FILE
+    if eval $cmd >> $LOG_FILE 2>&1; then
+        log_message "✓ Successfully analyzed $model_name"
+        SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+    else
+        log_message "✗ Failed to analyze $model_name (check $LOG_FILE and $ANALYSIS_BASE_DIR/logs/ for details)"
+        FAIL_COUNT=$((FAIL_COUNT + 1))
+    fi
 done
+log_message "Individual analysis complete. Success: $SUCCESS_COUNT, Failed: $FAIL_COUNT."
 
-# Run comparison
-python analyze_head_diversity.py \
-    --compare \
-    --model_paths $MODEL_PATHS \
-    --output_dir "$COMPARE_DIR" \
-    --d_model 512 --nhead 8 --nlayers 6
-
-if [ $? -eq 0 ]; then
-    log_message "✓ Comparison analysis completed successfully"
+# --- Comparison Analysis ---
+if [ $SUCCESS_COUNT -lt 2 ]; then
+    log_message "Skipping comparison analysis: Fewer than 2 models successfully analyzed."
 else
-    log_message "✗ Comparison analysis failed"
+    log_message "--- Starting Comparison Analysis ---"
+    COMPARISON_OUTPUT_DIR="$ANALYSIS_BASE_DIR/comparison"
+    mkdir -p "$COMPARISON_OUTPUT_DIR"
+
+    # Pass the list of successfully analyzed model paths directly to the script
+    # The "${MODEL_FILES[@]}" syntax handles spaces in paths correctly.
+    cmd_compare="python \"$ANALYSIS_SCRIPT\" \
+        --model_paths \"${MODEL_FILES[@]}\" \
+        --output_dir \"$COMPARISON_OUTPUT_DIR\" \
+        --d_model $D_MODEL \
+        --nhead $NHEAD \
+        --nlayers $NLAYERS \
+        --device cpu" # Explicitly run on CPU
+
+    log_message "Executing Comparison Command:"
+    echo "$cmd_compare" >> $LOG_FILE # Log the command
+
+    if eval $cmd_compare >> $LOG_FILE 2>&1; then
+        log_message "✓ Comparison analysis completed successfully."
+    else
+        log_message "✗ Comparison analysis failed."
+    fi
 fi
 
-# Create a summary of the diversity scores
-log_message "Creating diversity score summary"
+log_message "==================================================="
+log_message "Analysis Job Completed at: $(date)"
+log_message "Results saved in: $ANALYSIS_BASE_DIR"
+echo "==================================================="
 
-python -c "
-import os
-import json
-import matplotlib.pyplot as plt
-import numpy as np
-
-# Collect all diversity metrics
-metrics = []
-model_names = []
-diversity_scores = []
-model_types = []
-
-for root, dirs, files in os.walk('$ANALYSIS_DIR/models'):
-    for file in files:
-        if file == 'diversity_metrics.json':
-            try:
-                with open(os.path.join(root, file), 'r') as f:
-                    data = json.load(f)
-                    model_name = os.path.basename(root)
-                    model_names.append(model_name)
-                    diversity_scores.append(data.get('diversity_score', 0))
-                    model_types.append(data.get('model_type', 'unknown'))
-                    metrics.append(data)
-            except Exception as e:
-                print(f'Error processing {file}: {e}')
-
-# Sort models by type and diversity score
-sorted_indices = sorted(range(len(model_names)), 
-                       key=lambda i: (model_types[i] == 'vanilla', diversity_scores[i]))
-sorted_names = [model_names[i] for i in sorted_indices]
-sorted_scores = [diversity_scores[i] for i in sorted_indices]
-sorted_types = [model_types[i] for i in sorted_indices]
-
-# Save as CSV
-with open('$ANALYSIS_DIR/diversity_scores.csv', 'w') as f:
-    f.write('Model,Type,Diversity Score (lower is better)\n')
-    for i in range(len(sorted_names)):
-        f.write(f'{sorted_names[i]},{sorted_types[i]},{sorted_scores[i]:.6f}\n')
-
-print(f'Saved diversity scores to $ANALYSIS_DIR/diversity_scores.csv')
-
-# Create summary plot
-plt.figure(figsize=(12, 8))
-colors = ['#ff9999' if t == 'vanilla' else '#66b3ff' for t in sorted_types]
-plt.bar(range(len(sorted_names)), sorted_scores, color=colors)
-plt.xticks(range(len(sorted_names)), sorted_names, rotation=45, ha='right')
-plt.axhline(y=0.0, color='k', linestyle='--', alpha=0.3)
-plt.grid(axis='y', alpha=0.3)
-plt.xlabel('Model')
-plt.ylabel('Diversity Score (Lower is Better)')
-plt.title('Comparison of Attention Head Diversity Across All Models')
-plt.tight_layout()
-plt.savefig('$ANALYSIS_DIR/all_models_diversity.png', dpi=300)
-plt.close()
-
-print(f'Created summary plot at $ANALYSIS_DIR/all_models_diversity.png')
-"
-
-log_message "Analysis complete. Results saved to $ANALYSIS_DIR/"
-log_message "Summary CSV file: $ANALYSIS_DIR/diversity_scores.csv"
-log_message "Summary plot: $ANALYSIS_DIR/all_models_diversity.png"
-
-echo "================ ANALYSIS COMPLETE ================"
-echo "Finished at: $(date)"
+exit 0 # Explicitly exit with success code
