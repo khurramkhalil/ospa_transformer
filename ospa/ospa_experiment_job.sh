@@ -59,8 +59,11 @@ run_experiment() {
     echo "Experiment: $experiment_name - $(date)" > $exp_log
     
     # Base parameters from the paper draft
-    local base_params="--task lm --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
-    
+    local base_params="--task lm --d_model 256 --nhead 4 --nlayers 4 --dim_feedforward 1024 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
+    # local base_params="--task lm --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
+    # local base_params="--task lm --d_model 768 --nhead 12 --nlayers 12 --dim_feedforward 3072 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
+
+
     # IMPORTANT FIX: Ensure correct path construction for saved model
     # This uses the explicit output_dir and saves the model with the experiment name
     mkdir -p "$output_dir"  # Ensure output directory exists
