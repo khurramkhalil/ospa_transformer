@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --partition=rss-gpu
 #SBATCH -N 1
-#SBATCH -c 32
+#SBATCH -c 20
 #SBATCH --mem 100G
 #SBATCH --gres=gpu:A100:1
 #SBATCH --export=all
