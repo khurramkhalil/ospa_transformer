@@ -35,16 +35,16 @@ echo "==================================================="
 
 # --- Configuration ---
 # ** IMPORTANT: Set these to match the models you are analyzing **
-D_MODEL=256
-NHEAD=4
-NLAYERS=4
+D_MODEL=768
+NHEAD=12
+NLAYERS=12
 # Analysis script filename (VERIFY THIS NAME)
 ANALYSIS_SCRIPT="analyze_head_diversity.py"
 # Base directory for analysis outputs
 ANALYSIS_BASE_DIR="diversity_analysis_run_${SLURM_JOB_ID}"
 # Directories to search for model checkpoints
 SEARCH_DIRS=(
-    "experiments" # Assumes models are in subdirs like experiments/vanilla, experiments/ospa_init etc.
+    "experiments_large" # Assumes models are in subdirs like experiments/vanilla, experiments/ospa_init etc.
     # Add other parent directories if needed, e.g., "outputs"
 )
 
