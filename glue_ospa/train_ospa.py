@@ -20,7 +20,7 @@ import logging
 # --- Standard Libraries ---
 try:
     from transformers import AutoTokenizer, get_scheduler
-    from datasets import load_dataset
+    from datasets import load_dataset, ClassLabel
     import evaluate # Hugging Face Evaluate library for metrics
 except ImportError:
     print("Error: Required libraries not found.")
@@ -57,6 +57,7 @@ def load_and_preprocess_data(args):
             if tokenizer.eos_token is not None:
                 logger.warning(f"Tokenizer {args.tokenizer_name} missing pad token, using eos token {tokenizer.eos_token} as pad token.")
                 tokenizer.pad_token = tokenizer.eos_token
+                tokenizer.pad_token_id = tokenizer.eos_token_id
             else:
                  # Add a new pad token if no eos token either
                  logger.warning(f"Tokenizer {args.tokenizer_name} missing pad token and eos token. Adding new [PAD] token.")
@@ -64,8 +65,13 @@ def load_and_preprocess_data(args):
                  # Important: The model embedding layer needs resizing after adding tokens
                  args.resize_embedding = True # Flag to resize model embeddings later
 
+        # Ensure pad_token_id is set if pad_token exists
+        if tokenizer.pad_token is not None and tokenizer.pad_token_id is None:
+            tokenizer.pad_token_id = tokenizer.convert_tokens_to_ids(tokenizer.pad_token)
+
+
     except Exception as e:
-        logger.error(f"Failed to load tokenizer '{args.tokenizer_name}': {e}")
+        logger.error(f"Failed to load tokenizer '{args.tokenizer_name}': {e}", exc_info=True)
         exit(1)
 
     # Standard GLUE task keys
@@ -86,151 +92,235 @@ def load_and_preprocess_data(args):
 
         logger.info(f"--- Loading and Preprocessing GLUE task: {glue_task} ---")
         try:
+            # Load with a specific cache directory if desired
+            # raw_datasets = load_dataset("glue", glue_task, cache_dir=args.cache_dir)
             raw_datasets = load_dataset("glue", glue_task)
         except Exception as e:
-            logger.error(f"Failed to load GLUE dataset '{glue_task}': {e}")
+            logger.error(f"Failed to load GLUE dataset '{glue_task}': {e}", exc_info=True)
             exit(1)
 
         sentence1_key, sentence2_key = task_to_keys[glue_task]
 
-        # Determine label info
+        # Determine label info from dataset features
         args.is_regression = glue_task == "stsb"
+        label_column_name = "label" # Standard label column in GLUE
         if not args.is_regression:
-            label_list = raw_datasets["train"].features["label"].names
-            args.num_labels = len(label_list)
-            logger.info(f"Task: {glue_task} (Classification), Num Labels: {args.num_labels}")
+            # Ensure label is ClassLabel type
+            if not isinstance(raw_datasets["train"].features[label_column_name], ClassLabel):
+                # Attempt to cast if it's just int (sometimes happens with local data)
+                logger.warning(f"Label column for {glue_task} is not ClassLabel. Attempting to cast.")
+                # This is tricky; usually features are set by `datasets` library.
+                # If loading custom data, ensure Features are defined correctly.
+                # For GLUE from HF Hub, this should be correct.
+                pass # Assume it's okay or will be handled by label_list below
+            try:
+                label_list = raw_datasets["train"].features[label_column_name].names
+                args.num_labels = len(label_list)
+                logger.info(f"Task: {glue_task} (Classification), Num Labels: {args.num_labels}, Labels: {label_list}")
+            except Exception as e:
+                logger.error(f"Could not infer labels for GLUE task {glue_task}: {e}. Features: {raw_datasets['train'].features}")
+                # Fallback for tasks like WNLI which might have issues or if features are minimal
+                unique_labels = sorted(list(set(raw_datasets["train"][label_column_name])))
+                args.num_labels = len(unique_labels)
+                logger.warning(f"Falling back to inferring num_labels from unique values: {args.num_labels} ({unique_labels})")
+                if args.num_labels <= 1:
+                    logger.error("Inferred only one label or invalid label set. Check dataset.")
+                    exit(1)
         else:
             args.num_labels = 1
             logger.info(f"Task: {glue_task} (Regression), Num Labels: {args.num_labels}")
 
+
         # Preprocessing function for tokenizer
         def preprocess_glue(examples):
             if sentence2_key is None: # Single sentence task
-                return tokenizer(examples[sentence1_key], truncation=True, padding="max_length", max_length=args.max_seq_len)
+                texts = (examples[sentence1_key],)
             else: # Sentence pair task
-                return tokenizer(examples[sentence1_key], examples[sentence2_key], truncation=True, padding="max_length", max_length=args.max_seq_len)
+                texts = (examples[sentence1_key], examples[sentence2_key])
+            # Padding to max_length, truncation if longer
+            result = tokenizer(*texts, padding="max_length", max_length=args.max_seq_len, truncation=True)
+            # For STSB, labels are float. Ensure they are handled if present in examples.
+            # The `map` function will keep other columns if not in remove_columns.
+            return result
 
-        # Columns to remove after tokenization
-        remove_cols = ["idx"] + ([sentence1_key] if sentence1_key else []) + ([sentence2_key] if sentence2_key else [])
+
+        # Columns to remove after tokenization (original text columns)
+        remove_cols = [key for key in [sentence1_key, sentence2_key, "idx"] if key is not None]
+
 
         # Apply tokenization
+        logger.info(f"Tokenizing GLUE/{glue_task} with max_seq_len={args.max_seq_len}...")
         try:
             processed_datasets = raw_datasets.map(
                 preprocess_glue,
                 batched=True,
-                remove_columns=remove_cols,
+                remove_columns=remove_cols, # Remove original text columns after tokenization
                 desc=f"Tokenizing GLUE/{glue_task}"
             )
         except Exception as e:
-            logger.error(f"Error during tokenization: {e}")
+            logger.error(f"Error during GLUE tokenization: {e}", exc_info=True)
             exit(1)
 
-        # Rename label column for consistency
-        processed_datasets = processed_datasets.rename_column("label", "labels")
-        processed_datasets.set_format("torch")
+        # Rename label column to 'labels' for consistency with some HF models/trainers
+        if label_column_name != "labels":
+            processed_datasets = processed_datasets.rename_column(label_column_name, "labels")
+
+        processed_datasets.set_format("torch", columns=["input_ids", "attention_mask", "labels", "token_type_ids"] if sentence2_key else ["input_ids", "attention_mask", "labels"])
+
 
         # Select splits (handle MNLI special case for validation)
         train_dataset = processed_datasets["train"]
         validation_key = "validation_matched" if glue_task == "mnli" else "validation"
-        eval_dataset = processed_datasets[validation_key]
+        # Handle tasks like WNLI that might not have a standard validation split
+        eval_dataset = processed_datasets.get(validation_key)
+        if eval_dataset is None:
+            logger.warning(f"Split '{validation_key}' not found for {glue_task}. Attempting to use 'test' split if available, or 'train' split for evaluation.")
+            eval_dataset = processed_datasets.get("test", processed_datasets["train"]) # Fallback
+
         # Use validation set as test set (no public test labels for GLUE)
         test_dataset = eval_dataset
-        # MNLI also has a mismatched validation set you might want to evaluate separately
+
+        # MNLI also has a mismatched validation set
+        final_datasets = {"train": train_dataset, "validation": eval_dataset, "test": test_dataset}
         if glue_task == "mnli":
-            test_mismatched_dataset = processed_datasets["validation_mismatched"]
-            logger.info("Using MNLI validation_matched for validation, validation_mismatched available for testing.")
-            return {"train": train_dataset, "validation": eval_dataset, "test": test_dataset, "test_mismatched": test_mismatched_dataset}, tokenizer
-        else:
-            logger.info(f"Using validation split '{validation_key}' for evaluation and testing.")
-            return {"train": train_dataset, "validation": eval_dataset, "test": test_dataset}, tokenizer
+            # Check if mismatched split exists
+            mismatched_split = "validation_mismatched" # Or "test_mismatched" if using that for submission
+            if mismatched_split in processed_datasets:
+                final_datasets["test_mismatched"] = processed_datasets[mismatched_split]
+                logger.info("Using MNLI validation_matched for validation, and validation_mismatched also available.")
+            else:
+                logger.warning(f"MNLI mismatched split '{mismatched_split}' not found.")
+
+        logger.info(f"GLUE Data Processing Complete. Train size: {len(final_datasets['train'])}, Eval size: {len(final_datasets['validation'])}")
+        return final_datasets, tokenizer
 
 
     elif args.task == 'lm':
-        # --- Language Modeling Task Processing ---
-        logger.info(f"--- Loading and Preprocessing LM dataset: {args.lm_dataset_name} ({args.lm_dataset_config}) ---")
+        logger.info(f"--- Loading and Preprocessing LM dataset: {args.lm_dataset_name} (config: {args.lm_dataset_config}) ---")
         try:
-            # Load dataset (e.g., wikitext, wikitext-103-raw-v1)
             raw_datasets = load_dataset(args.lm_dataset_name, args.lm_dataset_config)
         except Exception as e:
-             logger.error(f"Failed to load LM dataset '{args.lm_dataset_name}' config '{args.lm_dataset_config}': {e}")
+             logger.error(f"Failed to load LM dataset '{args.lm_dataset_name}' config '{args.lm_dataset_config}': {e}", exc_info=True)
              exit(1)
 
-        # Assume the main text is in the 'text' column
-        text_column_name = "text"
+        text_column_name = "text" # Common for datasets like wikitext
         if text_column_name not in raw_datasets["train"].column_names:
             logger.error(f"Expected column '{text_column_name}' not found in LM dataset. Available columns: {raw_datasets['train'].column_names}")
-            exit(1)
+            # Attempt to find another likely text column if 'text' is not present
+            potential_text_cols = [col for col in raw_datasets["train"].column_names if isinstance(raw_datasets["train"].features[col], Value) and raw_datasets["train"].features[col].dtype == 'string']
+            if potential_text_cols:
+                text_column_name = potential_text_cols[0]
+                logger.warning(f"Using first string column '{text_column_name}' as text input for LM.")
+            else:
+                logger.error("No suitable string column found for LM text input.")
+                exit(1)
 
-        # Set model output size to vocab size
-        args.num_labels = tokenizer.vocab_size
+
+        args.num_labels = tokenizer.vocab_size # For LM, output layer predicts vocab tokens
         args.is_regression = False
         logger.info(f"Task: Language Modeling, Vocab Size: {args.num_labels}")
 
         # Tokenization function for LM
         def tokenize_lm(examples):
-            # Tokenize without padding initially
+            # Tokenize without padding or truncation initially; grouping will handle fixed lengths.
             return tokenizer(examples[text_column_name], truncation=False)
 
         logger.info("Tokenizing LM dataset...")
         try:
+            # `tokenized_datasets` will typically have 'input_ids' and 'attention_mask' (if tokenizer adds it)
             tokenized_datasets = raw_datasets.map(
                 tokenize_lm,
                 batched=True,
-                remove_columns=[text_column_name], # Remove original text column
+                remove_columns=[text_column_name], # Remove original text column after tokenization
                 desc="Tokenizing LM data"
             )
         except Exception as e:
-            logger.error(f"Error during LM tokenization: {e}")
+            logger.error(f"Error during LM tokenization: {e}", exc_info=True)
             exit(1)
 
-        # Group texts into blocks of fixed size (e.g., max_seq_len)
+        # Determine block_size for grouping texts
         block_size = args.max_seq_len
-        if block_size is None:
-            # Determine block_size if not set (e.g., tokenizer model_max_length)
+        if block_size is None: # If not specified, try to use tokenizer's model_max_length
             block_size = tokenizer.model_max_length
-            if block_size > 1024: # Cap block size for memory reasons
-                logger.warning(f"Tokenizer max length {block_size} is large, capping block size to 1024.")
+            # Cap block_size to avoid excessive memory usage if tokenizer's max_len is very large
+            if block_size > 1024 and block_size is not None:
+                logger.warning(f"Tokenizer model_max_length ({tokenizer.model_max_length}) is large, capping block_size to 1024 for LM.")
                 block_size = 1024
-            args.max_seq_len = block_size # Update args if derived
-            logger.info(f"Using derived block size for LM: {block_size}")
-
-
+            elif block_size is None: # Fallback if model_max_length is also None
+                 logger.warning("max_seq_len and tokenizer.model_max_length are None. Defaulting LM block_size to 128.")
+                 block_size = 128
+            args.max_seq_len = block_size # Update args if block_size was derived
         logger.info(f"Grouping LM texts into blocks of size {block_size}...")
+
+
         def group_texts(examples):
-            # Concatenate all texts
+            # Concatenate all texts for 'input_ids' and other keys from tokenizer output
+            # (e.g. 'attention_mask' if tokenizer adds it for special tokens even without padding)
             concatenated_examples = {k: sum(examples[k], []) for k in examples.keys()}
             total_length = len(concatenated_examples[list(examples.keys())[0]])
             # Drop the small remainder that is smaller than block_size
+            if total_length < block_size : # Handle case where total_length is less than block_size
+                 return {k: [] for k in examples.keys()} # Return empty dict for this batch
             total_length = (total_length // block_size) * block_size
+
             # Split by chunks of block_size
             result = {
                 k: [t[i : i + block_size] for i in range(0, total_length, block_size)]
                 for k, t in concatenated_examples.items()
             }
-            # Create labels by shifting input_ids
+            # Create labels by shifting input_ids (common for causal LM)
             result["labels"] = result["input_ids"].copy()
             return result
 
         try:
+            # After grouping, lm_datasets contains lists of lists of integers for input_ids, etc.
             lm_datasets = tokenized_datasets.map(group_texts, batched=True, desc="Grouping LM texts")
         except Exception as e:
-             logger.error(f"Error grouping LM texts: {e}")
+             logger.error(f"Error grouping LM texts: {e}", exc_info=True)
              exit(1)
 
-        # Prepare dataset dictionary
+        # CRITICAL: Set format to torch AFTER all mapping operations
+        try:
+            # Ensure all columns are convertible to torch tensors
+            # Relevant columns are 'input_ids', 'attention_mask' (if present), 'labels'
+            columns_to_set_format = ["input_ids", "labels"]
+            if "attention_mask" in lm_datasets["train"].column_names:
+                columns_to_set_format.append("attention_mask")
+            if "token_type_ids" in lm_datasets["train"].column_names: # Less common for scratch LM
+                columns_to_set_format.append("token_type_ids")
+
+            lm_datasets.set_format("torch", columns=columns_to_set_format)
+        except Exception as e:
+            logger.error(f"Error setting torch format for LM datasets: {e}", exc_info=True)
+            logger.info(f"Columns in LM dataset 'train' split before set_format: {lm_datasets['train'].column_names}")
+            exit(1)
+
         train_dataset = lm_datasets["train"]
-        # Use appropriate validation/test splits
-        eval_dataset = lm_datasets.get("validation", lm_datasets.get("test"))
-        test_dataset = lm_datasets.get("test", lm_datasets.get("validation"))
+        # Determine validation and test splits, handling missing splits
+        eval_dataset = lm_datasets.get("validation")
+        if eval_dataset is None:
+            logger.warning("LM dataset 'validation' split not found. Using 'test' split for validation.")
+            eval_dataset = lm_datasets.get("test")
+        if eval_dataset is None: # If still none, use train split for eval (not ideal)
+            logger.error("LM dataset 'validation' and 'test' splits not found. Using 'train' for validation - CHECK DATASET.")
+            eval_dataset = lm_datasets["train"]
 
-        if eval_dataset is None or test_dataset is None:
-             logger.error("Could not find suitable validation/test splits in LM dataset.")
-             exit(1)
+
+        test_dataset = lm_datasets.get("test")
+        if test_dataset is None:
+            logger.warning("LM dataset 'test' split not found. Using 'validation' split for testing.")
+            test_dataset = eval_dataset # Fallback to eval_dataset if no specific test set
+        if test_dataset is None: # If still none, error
+            logger.error("Could not find suitable test split for LM.")
+            exit(1)
+
 
         logger.info("LM Data Processing Complete.")
+        logger.info(f"LM Dataset sizes: Train={len(train_dataset)}, Validation={len(eval_dataset)}, Test={len(test_dataset)}")
         return {"train": train_dataset, "validation": eval_dataset, "test": test_dataset}, tokenizer
 
     else:
+        # This case should be caught by argument parsing, but defensive
         raise ValueError(f"Unsupported task type specified: {args.task}")
 
 # --- Training Epoch Function ---
