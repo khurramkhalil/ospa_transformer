@@ -27,6 +27,8 @@ except ImportError:
     print("Please install: pip install torch transformers datasets evaluate scikit-learn tqdm")
     exit(1)
 
+torch.autograd.set_detect_anomaly(True)
+
 # --- Local Imports ---
 try:
     # Assuming improved_transformer_model.py defines TransformerModel compatible with HF inputs
