@@ -123,10 +123,11 @@ def load_and_preprocess_data(args):
         # *** ADD FILTERING STEP FOR GLUE ***
         logger.info("Filtering out GLUE examples that are entirely padding...")
         def filter_all_padding(example):
-            # 'attention_mask' from HF tokenizer: 1 for real token, 0 for padding
-            # If `any` token has mask 1, it's not all padding.
-            # `example['attention_mask']` is a list of ints here, before set_format('torch')
-            return any(token_mask == 1 for token_mask in example['attention_mask'])
+            is_all_pad = not any(token_mask == 1 for token_mask in example['attention_mask'])
+            if is_all_pad:
+                # logger.info(f"Filtering an all-pad example. input_ids: {example['input_ids']}") # Can be very verbose
+                pass
+            return not is_all_pad
 
         for split_name in list(processed_datasets.keys()):
             original_len = len(processed_datasets[split_name])
