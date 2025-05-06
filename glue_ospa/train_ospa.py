@@ -174,14 +174,21 @@ def load_and_preprocess_data(args):
             )
             def filter_all_padding(example):
                 # attention_mask has 1 for real tokens, 0 for padding
-                return torch.any(torch.tensor(example['attention_mask']) == 1)
-            # Filter all splits
-            for split_name in processed_datasets.keys():
+                return any(token_mask == 1 for token_mask in example['attention_mask'])
+            
+            # In load_and_preprocess_data, for GLUE, after processed_datasets = raw_datasets.map(...)
+            logger.info("Filtering out examples that are entirely padding...")
+            for split_name in list(processed_datasets.keys()): # Use list to avoid issues if a split becomes empty
                 original_len = len(processed_datasets[split_name])
-                processed_datasets[split_name] = processed_datasets[split_name].filter(filter_all_padding, desc=f"Filtering all-pad for {split_name}")
+                processed_datasets[split_name] = processed_datasets[split_name].filter(
+                    filter_all_padding,
+                    desc=f"Filtering all-pad for {split_name}"
+                )
                 new_len = len(processed_datasets[split_name])
                 if new_len < original_len:
                     logger.info(f"Filtered out {original_len - new_len} all-padding examples from {split_name} split.")
+                if new_len == 0 and original_len > 0:
+                    logger.warning(f"Split '{split_name}' became empty after filtering all-padding examples! Check data or max_seq_len.")
 
         except Exception as e:
             logger.error(f"Error during GLUE tokenization: {e}", exc_info=True)
