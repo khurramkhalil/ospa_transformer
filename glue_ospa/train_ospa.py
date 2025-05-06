@@ -341,13 +341,20 @@ def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch,
                 attention_mask = batch_data.get('attention_mask', torch.ones_like(input_ids)).to(args.device)
                 labels = batch_data['labels'].to(args.device)
             elif args.task == 'glue':
+                # Add this condition at the beginning of the GLUE case
+                if isinstance(batch_data, dict):
+                    # Dictionary format from HuggingFace datasets
+                    input_ids = batch_data['input_ids'].to(args.device)
+                    attention_mask = batch_data.get('attention_mask', torch.ones_like(input_ids)).to(args.device)
+                    labels = batch_data['labels'].to(args.device)
+
                 # GLUE batches are tuples (input_features, labels) from your collate_fn
                 # input_features is already [SeqLen, BatchSize]
                 # labels is [BatchSize]
                 # The tokenizer in preprocess_glue already creates input_ids and attention_mask
                 # So, your collate_fn for GLUE should ideally return a dict like the LM one
                 # OR you unpack the tuple here
-                if isinstance(batch_data, (list, tuple)) and len(batch_data) == 2:
+                elif isinstance(batch_data, (list, tuple)) and len(batch_data) == 2:
                     # Assuming batch_data[0] contains tokenized inputs (potentially a dict itself or a tensor)
                     # And batch_data[1] contains labels
                     
@@ -457,7 +464,7 @@ def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch,
 
 
 # --- Evaluation Function ---
-def evaluate(model, dataloader, criterion, args, tokenizer, eval_metric=None, eval_type="Validation"): # Added tokenizer
+def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, eval_metric=None, eval_type="Validation"): # Added tokenizer
     """Evaluates the model on a given dataloader."""
     model.eval()
     total_loss = 0.0
@@ -706,7 +713,7 @@ def main(args):
             epoch_start_time = time.time()
             logger.info(f"\n--- Epoch {epoch}/{args.epochs} ---")
             avg_train_loss = train_epoch(model, train_dataloader, optimizer, criterion, scheduler, args, epoch, tokenizer) # Pass tokenizer
-            val_results = evaluate(model, eval_dataloader, criterion, args, tokenizer, eval_metric, eval_type="Validation") # Pass tokenizer
+            val_results = evaluate_model_on_epoch(model, eval_dataloader, criterion, args, tokenizer, eval_metric, eval_type="Validation") # Pass tokenizer
 
             history['epochs'][epoch] = {"train_loss": avg_train_loss, "validation": val_results}
             logger.info(f"Epoch {epoch} Validation Results: {val_results}")
@@ -749,13 +756,13 @@ def main(args):
     else:
         logger.warning("No best model checkpoint saved. Evaluating with final model state.")
 
-    test_results = evaluate(model, test_dataloader, criterion, args, tokenizer, eval_metric, eval_type="Test") # Pass tokenizer
+    test_results = evaluate_model_on_epoch(model, test_dataloader, criterion, args, tokenizer, eval_metric, eval_type="Test") # Pass tokenizer
     logger.info(f"Final Test Results: {test_results}")
     history['final_test_results'] = test_results
 
     if args.task == 'glue' and args.glue_task == 'mnli' and test_mismatched_dataloader:
         logger.info("\n--- Final Evaluation on MNLI Mismatched Test Set ---")
-        test_mm_results = evaluate(model, test_mismatched_dataloader, criterion, args, tokenizer, eval_metric, eval_type="Test_Mismatched") # Pass tokenizer
+        test_mm_results = evaluate_model_on_epoch(model, test_mismatched_dataloader, criterion, args, tokenizer, eval_metric, eval_type="Test_Mismatched") # Pass tokenizer
         logger.info(f"Final Test Mismatched Results: {test_mm_results}")
         history['final_test_mismatched_results'] = test_mm_results
 
