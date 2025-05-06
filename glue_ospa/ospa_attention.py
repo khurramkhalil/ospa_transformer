@@ -222,12 +222,17 @@ class OSPAMultiHeadAttention(nn.Module):
             logger.error(f"!!! AT LEAST ONE ROW IN INPUT TO SOFTMAX IS ALL -INF (Batch {batch_idx_for_debug}) !!!")
             # Find which batch items/heads/query_pos have this issue
             problematic_indices = (is_all_neg_inf == True).nonzero(as_tuple=False)
-            logger.error(f"  Problematic indices (batch, head, query_pos): {problematic_indices.tolist()}")
+            logger.error(f"  Problematic indices (batch_in_global_attn_matrix, head, query_pos_in_tgt_len): {problematic_indices.tolist()}")
             # You might want to inspect the original input_ids and masks for these problematic indices
             # For example, print key_padding_mask for the problematic batch items:
+            unique_problem_batch_indices = problematic_indices[:,0].unique()
+            logger.error(f"  Unique batch indices in current mini-batch with all -inf rows: {unique_problem_batch_indices.tolist()}")
+
             if key_padding_mask is not None:
-                 for b_idx in problematic_indices[:,0].unique(): # Iterate through unique batch indices with problems
-                     logger.error(f"  key_padding_mask for batch item {b_idx.item()}: {key_padding_mask[b_idx.item()]}")
+                 for b_idx_in_minibatch in unique_problem_batch_indices:
+                     logger.error(f"  key_padding_mask for batch item {b_idx_in_minibatch.item()} (within this minibatch): {key_padding_mask[b_idx_in_minibatch.item()]}")
+                #  for b_idx in problematic_indices[:,0].unique(): # Iterate through unique batch indices with problems
+                #      logger.error(f"  key_padding_mask for batch item {b_idx.item()}: {key_padding_mask[b_idx.item()]}")
             if attn_mask is not None: # Causal mask for LM, typically
                  # attn_mask might be [tgt_len, src_len]
                  # For a problematic query_pos, inspect its row in attn_mask

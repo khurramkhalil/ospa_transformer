@@ -135,15 +135,28 @@ def load_and_preprocess_data(args):
 
         # Preprocessing function for tokenizer
         def preprocess_glue(examples):
-            if sentence2_key is None: # Single sentence task
+            if sentence2_key is None:
                 texts = (examples[sentence1_key],)
-            else: # Sentence pair task
+            else:
                 texts = (examples[sentence1_key], examples[sentence2_key])
-            # Padding to max_length, truncation if longer
-            result = tokenizer(*texts, padding="max_length", max_length=args.max_seq_len, truncation=True)
-            # For STSB, labels are float. Ensure they are handled if present in examples.
-            # The `map` function will keep other columns if not in remove_columns.
-            return result
+            
+            tokenized_output = tokenizer(*texts, padding="max_length", max_length=args.max_seq_len, truncation=True)
+            
+            # --- DEBUG CHECK ---
+            # This check is after individual tokenization, before batching by DataLoader
+            # For each example in the `examples` batch being processed by .map()
+            for i in range(len(tokenized_output['input_ids'])):
+                if isinstance(tokenized_output['attention_mask'][i], list): # if not tensor yet
+                    current_am = torch.tensor(tokenized_output['attention_mask'][i])
+                else: # if already tensor
+                    current_am = tokenized_output['attention_mask'][i]
+                if torch.all(current_am == 0):
+                    logger.warning(f"GLUE Preprocessing: Found an example that is ALL PADDING after tokenization & padding.")
+                    logger.warning(f"  Original sentence1: {examples[sentence1_key][i] if sentence1_key else 'N/A'}")
+                    logger.warning(f"  Original sentence2: {examples[sentence2_key][i] if sentence2_key else 'N/A'}")
+                    logger.warning(f"  Tokenized input_ids: {tokenized_output['input_ids'][i]}")
+            # --------------------
+            return tokenized_output
 
 
         # Columns to remove after tokenization (original text columns)
@@ -159,6 +172,17 @@ def load_and_preprocess_data(args):
                 remove_columns=remove_cols, # Remove original text columns after tokenization
                 desc=f"Tokenizing GLUE/{glue_task}"
             )
+            def filter_all_padding(example):
+                # attention_mask has 1 for real tokens, 0 for padding
+                return torch.any(torch.tensor(example['attention_mask']) == 1)
+            # Filter all splits
+            for split_name in processed_datasets.keys():
+                original_len = len(processed_datasets[split_name])
+                processed_datasets[split_name] = processed_datasets[split_name].filter(filter_all_padding, desc=f"Filtering all-pad for {split_name}")
+                new_len = len(processed_datasets[split_name])
+                if new_len < original_len:
+                    logger.info(f"Filtered out {original_len - new_len} all-padding examples from {split_name} split.")
+
         except Exception as e:
             logger.error(f"Error during GLUE tokenization: {e}", exc_info=True)
             exit(1)
