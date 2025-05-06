@@ -554,9 +554,9 @@ def main(args):
         num_warmup_steps=num_warmup_steps,
         num_training_steps=num_training_steps
     )
-    logger.info(f"Using LR scheduler: {scheduler.name}, Total Steps: {num_training_steps}, Warmup Steps: {num_warmup_steps}")
+    logger.info(f"Using LR scheduler: {type(scheduler).__name__}, Total Steps: {num_training_steps}, Warmup Steps: {num_warmup_steps}")
     # Ensure scheduler update logic matches choice (linear usually per step)
-    if not args.scheduler_update_every_step and scheduler.name != "cosine":
+    if not args.scheduler_update_every_step and type(scheduler).__name__ != "cosine":
          logger.warning("Linear/other HF schedulers typically update per step. Consider setting --scheduler_update_every_step")
     # For CosineAnnealingLR, update per epoch if scheduler_update_every_step is False
 
