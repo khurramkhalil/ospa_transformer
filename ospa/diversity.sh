@@ -35,9 +35,9 @@ echo "==================================================="
 
 # --- Configuration ---
 # ** IMPORTANT: Set these to match the models you are analyzing **
-D_MODEL=768
-NHEAD=12
-NLAYERS=12
+D_MODEL=256
+NHEAD=4
+NLAYERS=4
 # Analysis script filename (VERIFY THIS NAME)
 ANALYSIS_SCRIPT="analyze_head_diversity.py"
 # Base directory for analysis outputs
