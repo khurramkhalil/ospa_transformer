@@ -1,5 +1,8 @@
 # train_ospa.py
+
 import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 import sys
 import json
 import argparse
