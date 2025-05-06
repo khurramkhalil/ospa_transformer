@@ -172,11 +172,11 @@ class OSPATransformerEncoder(nn.Module):
         self.num_layers = num_layers
         self.norm = norm
         
-    def forward(self, src, mask=None, src_key_padding_mask=None):
+    def forward(self, src, mask=None, src_key_padding_mask=None, batch_idx_for_debug: int = -1):
         output = src
         
         for layer in self.layers:
-            output = layer(output, src_mask=mask, src_key_padding_mask=src_key_padding_mask)
+            output = layer(output, src_mask=mask, src_key_padding_mask=src_key_padding_mask, batch_idx_for_debug=batch_idx_for_debug)
             
         if self.norm is not None:
             output = self.norm(output)
