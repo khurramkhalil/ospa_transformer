@@ -24,16 +24,16 @@ echo "CUDA visible devices: $CUDA_VISIBLE_DEVICES"
 echo "==================================================="
 
 # Create all necessary directories upfront
-mkdir -p experiments
-mkdir -p experiments/vanilla
-mkdir -p experiments/ospa_init
-mkdir -p experiments/ospa_regularize
-mkdir -p experiments/ospa_strict
-mkdir -p experiments/analysis
-mkdir -p experiments/logs
+mkdir -p experiments_small
+mkdir -p experiments_small/vanilla
+mkdir -p experiments_small/ospa_init
+mkdir -p experiments_small/ospa_regularize
+mkdir -p experiments_small/ospa_strict
+mkdir -p experiments_small/analysis
+mkdir -p experiments_small/logs
 
 # Log file for tracking experiment progress
-MAIN_LOG="experiments/logs/experiment_progress.log"
+MAIN_LOG="experiments_small/logs/experiment_progress.log"
 echo "OSPA Experiment Run (FIXED) - $(date)" > $MAIN_LOG
 
 # Function to log messages to both console and log file
@@ -55,12 +55,12 @@ run_experiment() {
     log_message "Model type: $transformer_type, Orth mode: $orth_mode, Lambda: $orth_weight"
     
     # Create experiment-specific log
-    local exp_log="experiments/logs/${experiment_name}.log"
+    local exp_log="experiments_small/logs/${experiment_name}.log"
     echo "Experiment: $experiment_name - $(date)" > $exp_log
     
     # Base parameters from the paper draft
-    # local base_params="--task classification --d_model 256 --nhead 4 --nlayers 4 --dim_feedforward 1024 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
-    local base_params="--task classification --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
+    local base_params="--task classification --d_model 256 --nhead 4 --nlayers 4 --dim_feedforward 1024 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
+    # local base_params="--task lm --d_model 512 --nhead 8 --nlayers 6 --dim_feedforward 2048 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
     # local base_params="--task lm --d_model 768 --nhead 12 --nlayers 12 --dim_feedforward 3072 --dropout 0.1 --bptt 70 --vocab_cutoff 30000 --epochs 15 --batch_size 32 --gradient_accumulation_steps 4 --lr 5e-4 --weight_decay 0.01 --clip 0.25 --log_interval 50 --scheduler_update_every_step"
 
 
@@ -114,16 +114,16 @@ fi
 log_message "========== TRAINING BASELINE AND OSPA MODELS =========="
 
 # Train vanilla transformer (baseline)
-run_experiment "vanilla_transformer" "vanilla" "init" "0.0" "experiments/vanilla" ""
+run_experiment "vanilla_transformer" "vanilla" "init" "0.0" "experiments_small/vanilla" ""
 
 # Train OSPA with initialization only 
-run_experiment "ospa_init" "ospa" "init" "0.0" "experiments/ospa_init" ""
+run_experiment "ospa_init" "ospa" "init" "0.0" "experiments_small/ospa_init" ""
 
 # Train OSPA with regularization (medium strength only to save time)
-run_experiment "ospa_regularize_medium" "ospa" "regularize" "0.001" "experiments/ospa_regularize" ""
+run_experiment "ospa_regularize_medium" "ospa" "regularize" "0.001" "experiments_small/ospa_regularize" ""
 
 # Train OSPA with strict orthogonality
-run_experiment "ospa_strict" "ospa" "strict" "0.0" "experiments/ospa_strict" ""
+run_experiment "ospa_strict" "ospa" "strict" "0.0" "experiments_small/ospa_strict" ""
 
 # =================================================================
 # PART 2: MODEL ANALYSIS - HEAD DIVERSITY AND ORTHOGONALITY
@@ -162,17 +162,17 @@ analyze_model() {
 }
 
 # Analyze each model individually
-analyze_model "experiments/vanilla/vanilla_transformer.pt" "experiments/analysis/vanilla" "vanilla"
-analyze_model "experiments/ospa_init/ospa_init.pt" "experiments/analysis/ospa_init" "ospa_init"
-analyze_model "experiments/ospa_regularize/ospa_regularize_medium.pt" "experiments/analysis/ospa_regularize" "ospa_regularize"
-analyze_model "experiments/ospa_strict/ospa_strict.pt" "experiments/analysis/ospa_strict" "ospa_strict"
+analyze_model "experiments_small/vanilla/vanilla_transformer.pt" "experiments_small/analysis/vanilla" "vanilla"
+analyze_model "experiments_small/ospa_init/ospa_init.pt" "experiments_small/analysis/ospa_init" "ospa_init"
+analyze_model "experiments_small/ospa_regularize/ospa_regularize_medium.pt" "experiments_small/analysis/ospa_regularize" "ospa_regularize"
+analyze_model "experiments_small/ospa_strict/ospa_strict.pt" "experiments_small/analysis/ospa_strict" "ospa_strict"
 
 # Compare all models
 log_message "Running comparative analysis of all models"
 
 # Get all available model paths
 available_models=()
-for model_path in "experiments/vanilla/vanilla_transformer.pt" "experiments/ospa_init/ospa_init.pt" "experiments/ospa_regularize/ospa_regularize_medium.pt" "experiments/ospa_strict/ospa_strict.pt"; do
+for model_path in "experiments_small/vanilla/vanilla_transformer.pt" "experiments_small/ospa_init/ospa_init.pt" "experiments_small/ospa_regularize/ospa_regularize_medium.pt" "experiments_small/ospa_strict/ospa_strict.pt"; do
     if [ -f "$model_path" ]; then
         available_models+=("$model_path")
     fi
@@ -188,7 +188,7 @@ if [ ${#available_models[@]} -ge 2 ]; then
     # Run comparison
     python analyze_head_diversity.py\
         --model_paths $model_paths_str \
-        --output_dir experiments/analysis/comparison \
+        --output_dir experiments_small/analysis/comparison \
         --d_model 512 --nhead 8 --nlayers 6\
         --device cpu
         
