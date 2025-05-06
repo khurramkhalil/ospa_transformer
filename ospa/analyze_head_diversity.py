@@ -556,6 +556,6 @@ def main():
 
 if __name__ == "__main__":
     # Example Usage:
-    # Single: python analyze_diversity.py --model_path path/to/your/model.pt --output_dir results/model_analysis --d_model 512 --nhead 8 --nlayers 6
+    # Single: python analyze_diversity.py --model_path path/to/your/model.pt --output_dir results/model_analysi
     # Compare: python analyze_diversity.py --model_paths path/vanilla.pt path/ospa.pt --output_dir results/comparison --d_model 512 --nhead 8 --nlayers 6
     main()
