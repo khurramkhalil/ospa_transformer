@@ -156,84 +156,80 @@ class TransformerModel(nn.Module):
 
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None, **kwargs):
         """
-        Forward pass compatible with Hugging Face tokenizer outputs.
+        Forward pass.
 
         Args:
             input_ids: Tensor of token IDs, shape [seq_len, batch_size]
-            attention_mask: Tensor indicating padding, shape [batch_size, seq_len] (1 for real, 0 for pad)
-                           (Note: Pytorch MHA expects padding mask as True for PAD positions)
-            **kwargs: Catches other potential inputs like token_type_ids (ignored here).
-
-        Returns:
-            Tensor: Model output. Shape depends on task:
-                    - LM: [seq_len, batch_size, vocab_size] (logits)
-                    - Classification/GLUE: [batch_size, num_labels] (logits or regression value)
+            attention_mask: Tensor indicating padding from HF Tokenizer, shape [seq_len, batch_size] (1 for real, 0 for pad)
+                           OR [batch_size, seq_len] if coming directly from tokenizer without transpose.
+                           This will be converted to src_key_padding_mask.
+            **kwargs: Catches other potential inputs like token_type_ids.
         """
+        # Input_ids is expected to be [SeqLen, BatchSize]
         seq_len, batch_size = input_ids.shape
 
         # --- 1. Embeddings and Positional Encoding ---
-        # [seq_len, batch_size] -> [seq_len, batch_size, d_model]
         embeds = self.token_encoder(input_ids) * self.embedding_scale
-        src_pos = self.pos_encoder(embeds) # Apply positional encoding
+        src_pos = self.pos_encoder(embeds) # Output: [SeqLen, BatchSize, Dim]
 
         if torch.isnan(src_pos).any():
             logger.error("NaN detected after embedding/positional encoding!")
             raise ValueError("NaN input to transformer layers")
 
         # --- 2. Prepare Masks ---
-        src_mask = None # For causal LM mask
+        causal_src_mask = None # For causal LM mask
         src_key_padding_mask = None # For padding
 
         # Create causal mask for Language Modeling task
         if self.task == 'lm':
-            # Use PyTorch's built-in generation (requires torch >= 1.9)
              try:
-                 src_mask = nn.Transformer.generate_square_subsequent_mask(seq_len, device=input_ids.device)
+                 causal_src_mask = nn.Transformer.generate_square_subsequent_mask(seq_len, device=input_ids.device)
              except AttributeError:
-                 # Fallback for older PyTorch or custom implementation if needed
-                 logger.warning("nn.Transformer.generate_square_subsequent_mask not found. Ensure PyTorch version >= 1.9 or implement manually.")
-                 # Manual implementation (example):
+                 logger.warning("nn.Transformer.generate_square_subsequent_mask not found. Implement manually if PyTorch < 1.9.")
+                 # Manual fallback:
                  mask = (torch.triu(torch.ones(seq_len, seq_len, device=input_ids.device)) == 1).transpose(0, 1)
-                 src_mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+                 causal_src_mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
 
 
-        # Create padding mask from attention_mask (if provided)
-        # HF attention_mask: 1 for non-pad, 0 for pad
-        # PyTorch padding_mask: True for pad, False for non-pad
+        # Create PyTorch-style padding mask from Hugging Face attention_mask
+        # HF attention_mask: 1 for non-pad, 0 for pad.
+        # PyTorch src_key_padding_mask: True for pad, False for non-pad. Shape: [BatchSize, SeqLen]
         if attention_mask is not None:
-            # Input attention_mask shape: [batch_size, seq_len]
-            src_key_padding_mask = (attention_mask == 0)
-            # Ensure correct shape [batch_size, seq_len]
-            if src_key_padding_mask.shape != (batch_size, seq_len):
-                 logger.warning(f"Padding mask shape mismatch: Expected {(batch_size, seq_len)}, Got {src_key_padding_mask.shape}. Reshaping might be needed or input is wrong.")
-                 # Attempt basic recovery if possible, otherwise might cause errors later
-                 try:
-                     src_key_padding_mask = src_key_padding_mask.view(batch_size, seq_len)
-                 except:
-                     logger.error("Failed to reshape padding mask.")
-                     src_key_padding_mask = None # Disable padding mask if shape is wrong
+            # First, ensure attention_mask is [BatchSize, SeqLen] if it came as [SeqLen, BatchSize]
+            if attention_mask.shape == (seq_len, batch_size):
+                attention_mask_bs_first = attention_mask.transpose(0, 1) # Convert to [BatchSize, SeqLen]
+            elif attention_mask.shape == (batch_size, seq_len):
+                attention_mask_bs_first = attention_mask
+            else:
+                logger.error(f"Unexpected attention_mask shape: {attention_mask.shape}. Expected ({seq_len}, {batch_size}) or ({batch_size}, {seq_len}). Cannot create padding mask.")
+                attention_mask_bs_first = None # Cannot proceed safely
+
+            if attention_mask_bs_first is not None:
+                src_key_padding_mask = (attention_mask_bs_first == 0) # True where attention_mask is 0 (pad)
+        else:
+            # If no attention_mask is provided, assume no padding.
+            # This might happen for LM if all sequences in a block are full.
+            # Or, if the tokenizer didn't return one and all tokens are considered valid.
+            pass # src_key_padding_mask remains None
 
         # --- 3. Pass through Transformer Encoder ---
-        # Select the correct encoder component to call
         encoder_module = None
         if self.transformer_type == "ospa":
              if self.transformer and hasattr(self.transformer, 'encoder'):
                  encoder_module = self.transformer.encoder
         elif self.transformer_type == "vanilla":
-             if hasattr(self, 'transformer_encoder'): # Using nn.TransformerEncoder directly
+             if hasattr(self, 'transformer_encoder'):
                  encoder_module = self.transformer_encoder
-             elif self.transformer and hasattr(self.transformer, 'encoder'): # Using custom Vanilla wrapper
+             elif self.transformer and hasattr(self.transformer, 'encoder'):
                  encoder_module = self.transformer.encoder
-        # Add elif for other types like Linformer if needed
 
         if encoder_module is None:
              raise RuntimeError(f"Could not find valid encoder module for transformer_type '{self.transformer_type}'")
 
-        # Perform the encoder forward pass
         transformer_output = encoder_module(
-            src=src_pos,
-            mask=src_mask, # Causal mask for LM, None otherwise
-            src_key_padding_mask=src_key_padding_mask # Padding mask
+            src=src_pos,                      # [SeqLen, BatchSize, Dim]
+            mask=causal_src_mask,             # [SeqLen, SeqLen] (for LM) or None
+            src_key_padding_mask=src_key_padding_mask  # [BatchSize, SeqLen] (True for PAD)
         )
         # Output shape: [seq_len, batch_size, d_model]
 
@@ -242,18 +238,13 @@ class TransformerModel(nn.Module):
             raise ValueError("NaN output from transformer layers")
 
         # --- 4. Task-Specific Head ---
-        output = self.output_dropout(transformer_output) # Apply dropout before final layer
+        output_features = self.output_dropout(transformer_output)
 
         if self.task == "lm":
-            # Use all sequence outputs for LM prediction
-            # Output shape: [seq_len, batch_size, vocab_size]
-            final_output = self.output_layer(output)
+            final_output = self.output_layer(output_features) # [SeqLen, BatchSize, VocabSize]
         elif self.task == "glue" or self.task == "classification":
-            # Use the representation of the first token ([CLS] token equivalent)
-            # Extract shape [batch_size, d_model]
-            cls_representation = output[0, :, :]
-            # Output shape: [batch_size, num_labels]
-            final_output = self.output_layer(cls_representation)
+            cls_representation = output_features[0, :, :] # [BatchSize, Dim] (representation of first token)
+            final_output = self.output_layer(cls_representation) # [BatchSize, NumLabels]
         else:
              raise ValueError(f"Task head not implemented for task: {self.task}")
 
