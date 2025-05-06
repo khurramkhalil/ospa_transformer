@@ -212,6 +212,29 @@ class OSPAMultiHeadAttention(nn.Module):
                 logger.error(f"!!! NAN after applying key_padding_mask (Batch {batch_idx_for_debug}) !!!")
                 raise ValueError("NaN from key_padding_mask application")
 
+        # ... before softmax ...
+        logger.info(f"DEBUG MHA (Batch {batch_idx_for_debug}): Input to softmax (current_attn_scores) - min={current_attn_scores.min():.2e}, max={current_attn_scores.max():.2e}, has_nan={torch.isnan(current_attn_scores).any()}")
+
+        # Check if any row is all -inf
+        # current_attn_scores shape: [bsz, num_heads, tgt_len, src_len]
+        is_all_neg_inf = torch.all(current_attn_scores == float('-inf'), dim=-1) # Check along the key/src_len dimension
+        if torch.any(is_all_neg_inf):
+            logger.error(f"!!! AT LEAST ONE ROW IN INPUT TO SOFTMAX IS ALL -INF (Batch {batch_idx_for_debug}) !!!")
+            # Find which batch items/heads/query_pos have this issue
+            problematic_indices = (is_all_neg_inf == True).nonzero(as_tuple=False)
+            logger.error(f"  Problematic indices (batch, head, query_pos): {problematic_indices.tolist()}")
+            # You might want to inspect the original input_ids and masks for these problematic indices
+            # For example, print key_padding_mask for the problematic batch items:
+            if key_padding_mask is not None:
+                 for b_idx in problematic_indices[:,0].unique(): # Iterate through unique batch indices with problems
+                     logger.error(f"  key_padding_mask for batch item {b_idx.item()}: {key_padding_mask[b_idx.item()]}")
+            if attn_mask is not None: # Causal mask for LM, typically
+                 # attn_mask might be [tgt_len, src_len]
+                 # For a problematic query_pos, inspect its row in attn_mask
+                 for b, h, q_pos in problematic_indices.tolist():
+                     logger.error(f"  attn_mask row for query_pos {q_pos} (if applicable): {attn_mask[q_pos] if attn_mask.dim()==2 and q_pos < attn_mask.shape[0] else 'Mask not 2D or q_pos out of bounds'}")
+            # This is where you'd raise the error or handle it if you have a specific strategy
+            # raise ValueError("NaN from softmax due to all -inf row") # Keep this for now
 
         # --- 6. Softmax ---
         attn_weights_softmax = F.softmax(current_attn_scores, dim=-1)
