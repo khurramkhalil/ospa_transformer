@@ -167,10 +167,11 @@ class TransformerModel(nn.Module):
         """
         # Input_ids is expected to be [SeqLen, BatchSize]
         seq_len, batch_size = input_ids.shape
-        print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
         # --- 1. Embeddings and Positional Encoding ---
         embeds = self.token_encoder(input_ids) * self.embedding_scale
         src_pos = self.pos_encoder(embeds) # Output: [SeqLen, BatchSize, Dim]
+        
+        print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
 
         if torch.isnan(src_pos).any():
             logger.error("NaN detected after embedding/positional encoding!")
