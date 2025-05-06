@@ -167,7 +167,7 @@ class TransformerModel(nn.Module):
         """
         # Input_ids is expected to be [SeqLen, BatchSize]
         seq_len, batch_size = input_ids.shape
-
+        print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
         # --- 1. Embeddings and Positional Encoding ---
         embeds = self.token_encoder(input_ids) * self.embedding_scale
         src_pos = self.pos_encoder(embeds) # Output: [SeqLen, BatchSize, Dim]
@@ -232,6 +232,7 @@ class TransformerModel(nn.Module):
             src_key_padding_mask=src_key_padding_mask  # [BatchSize, SeqLen] (True for PAD)
         )
         # Output shape: [seq_len, batch_size, d_model]
+        print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - transformer_output: min={transformer_output.min().item():.2e}, max={transformer_output.max().item():.2e}, mean={transformer_output.mean().item():.2e}, has_nan={torch.isnan(transformer_output).any()}")
 
         if torch.isnan(transformer_output).any():
             logger.error("NaN detected after transformer encoder layers!")

@@ -375,7 +375,7 @@ def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch,
         try:
             # Pass attention_mask to the model. The model's forward should handle
             # converting it to src_key_padding_mask and generating causal_mask if task is LM.
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask) # No token_type_ids passed for simplicity unless model handles it
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask, batch_idx_for_debug=batch_idx) # No token_type_ids passed for simplicity unless model handles it
 
             # Loss calculation
             if args.task == 'lm':
@@ -607,7 +607,7 @@ def main(args):
             orth_mode=args.orth_mode,
             orth_penalty_weight=args.orth_penalty_weight,
             task=args.task,
-            num_labels=args.num_labels
+            num_labels=args.num_labels,
         ).to(args.device)
 
         if getattr(args, 'resize_embedding', False):
@@ -642,7 +642,7 @@ def main(args):
     optimizer = optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
     num_training_steps = args.epochs * len(train_dataloader) // args.gradient_accumulation_steps
     if num_training_steps == 0: num_training_steps = 1
-    num_warmup_steps = int(num_training_steps * 0.1)
+    num_warmup_steps = int(num_training_steps * 0.2)
     scheduler = get_scheduler(name="linear", optimizer=optimizer, num_warmup_steps=num_warmup_steps, num_training_steps=num_training_steps)
     logger.info(f"Using LR scheduler: {scheduler.name if hasattr(scheduler, 'name') else type(scheduler).__name__}, Total Steps: {num_training_steps}, Warmup Steps: {num_warmup_steps}")
 
