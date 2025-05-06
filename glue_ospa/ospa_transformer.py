@@ -73,7 +73,7 @@ class OSPATransformerEncoderLayer(nn.Module):
 # In ospa_transformer.py (if OSPA is being tested)
 # OR if you have a custom VanillaTransformerEncoderLayer
 
-    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+    def forward(self, src, src_mask=None, src_key_padding_mask=None, batch_idx_for_debug: int = -1):
         # --- DEBUG: Input to layer ---
         if torch.isnan(src).any():
             logger.error(f"!!! LAYER INPUT IS NAN !!! shape: {src.shape}")
@@ -86,7 +86,8 @@ class OSPATransformerEncoderLayer(nn.Module):
         src2_attn_output, attn_weights = self.self_attn( # Assuming self_attn returns weights for debug
             query=src, key=src, value=src,
             attn_mask=src_mask, key_padding_mask=src_key_padding_mask,
-            need_weights=True # Ensure your MHA can return weights
+            need_weights=True, # Ensure your MHA can return weights
+            batch_idx_for_debug=batch_idx_for_debug # Pass it here
         )
         if torch.isnan(src2_attn_output).any():
             logger.error(f"!!! NAN after self_attn block !!!")

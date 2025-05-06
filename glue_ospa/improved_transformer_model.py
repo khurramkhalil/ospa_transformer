@@ -154,7 +154,7 @@ class TransformerModel(nn.Module):
         # Note: Underlying Transformer layers (Vanilla/OSPA) might have their own init
 
 
-    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None, **kwargs):
+    def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor = None, batch_idx_for_debug: int = -1, **kwargs):
         """
         Forward pass.
 
@@ -171,7 +171,7 @@ class TransformerModel(nn.Module):
         embeds = self.token_encoder(input_ids) * self.embedding_scale
         src_pos = self.pos_encoder(embeds) # Output: [SeqLen, BatchSize, Dim]
         
-        print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
+        print(f"Batch {batch_idx_for_debug} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
 
         if torch.isnan(src_pos).any():
             logger.error("NaN detected after embedding/positional encoding!")
@@ -230,7 +230,8 @@ class TransformerModel(nn.Module):
         transformer_output = encoder_module(
             src=src_pos,                      # [SeqLen, BatchSize, Dim]
             mask=causal_src_mask,             # [SeqLen, SeqLen] (for LM) or None
-            src_key_padding_mask=src_key_padding_mask  # [BatchSize, SeqLen] (True for PAD)
+            src_key_padding_mask=src_key_padding_mask,  # [BatchSize, SeqLen] (True for PAD)
+            batch_idx_for_debug=batch_idx_for_debug # Pass it down
         )
         # Output shape: [seq_len, batch_size, d_model]
         print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - transformer_output: min={transformer_output.min().item():.2e}, max={transformer_output.max().item():.2e}, mean={transformer_output.mean().item():.2e}, has_nan={torch.isnan(transformer_output).any()}")
