@@ -5,8 +5,10 @@ import torch.nn as nn
 import torch.nn.functional as F
 import math
 import copy
+import logging # Add logging
 from ospa_attention import OSPAMultiHeadAttention
 
+logger = logging.getLogger(__name__) # Setup logger for this module
 
 class OSPATransformerEncoderLayer(nn.Module):
     """Transformer Encoder Layer with OSPA attention mechanism."""
@@ -39,35 +41,122 @@ class OSPATransformerEncoderLayer(nn.Module):
         # Activation function
         self.activation = _get_activation_fn(activation)
         
+    # def forward(self, src, src_mask=None, src_key_padding_mask=None):
+    #     """
+    #     Args:
+    #         src: source sequence [seq_len, batch_size, embed_dim]
+    #         src_mask: mask for src sequence [seq_len, seq_len]
+    #         src_key_padding_mask: mask for src keys per batch [batch_size, seq_len]
+    #     """
+    #     # Multi-head attention block
+    #     src2, _ = self.self_attn(
+    #         query=src,
+    #         key=src,
+    #         value=src,
+    #         attn_mask=src_mask,
+    #         key_padding_mask=src_key_padding_mask
+    #     )
+        
+    #     # Add & Norm (first residual connection)
+    #     src = src + self.dropout1(src2)
+    #     src = self.norm1(src)
+        
+    #     # Feed forward block
+    #     src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
+        
+    #     # Add & Norm (second residual connection)
+    #     src = src + self.dropout2(src2)
+    #     src = self.norm2(src)
+        
+    #     return src
+
+# In ospa_transformer.py (if OSPA is being tested)
+# OR if you have a custom VanillaTransformerEncoderLayer
+
     def forward(self, src, src_mask=None, src_key_padding_mask=None):
-        """
-        Args:
-            src: source sequence [seq_len, batch_size, embed_dim]
-            src_mask: mask for src sequence [seq_len, seq_len]
-            src_key_padding_mask: mask for src keys per batch [batch_size, seq_len]
-        """
-        # Multi-head attention block
-        src2, _ = self.self_attn(
-            query=src,
-            key=src,
-            value=src,
-            attn_mask=src_mask,
-            key_padding_mask=src_key_padding_mask
+        # --- DEBUG: Input to layer ---
+        if torch.isnan(src).any():
+            logger.error(f"!!! LAYER INPUT IS NAN !!! shape: {src.shape}")
+            # This shouldn't happen if prev layer output was okay, but good check
+        # logger.info(f"Layer Input - min={src.min():.2e}, max={src.max():.2e}, mean={src.mean():.2e}, has_nan={torch.isnan(src).any()}")
+
+        # --- Multi-head attention block ---
+        # Further debug inside self_attn if needed
+        # logger.info(f"Before Self-Attn Q - min={src.min():.2e}, max={src.max():.2e}") # Same as src
+        src2_attn_output, attn_weights = self.self_attn( # Assuming self_attn returns weights for debug
+            query=src, key=src, value=src,
+            attn_mask=src_mask, key_padding_mask=src_key_padding_mask,
+            need_weights=True # Ensure your MHA can return weights
         )
+        if torch.isnan(src2_attn_output).any():
+            logger.error(f"!!! NAN after self_attn block !!!")
+            logger.error(f"  Attn Input (src) - min={src.min():.2e}, max={src.max():.2e}, mean={src.mean():.2e}, has_nan={torch.isnan(src).any()}")
+            if attn_weights is not None: # Check attention weights themselves
+                logger.error(f"  Attn Weights - min={attn_weights.min():.2e}, max={attn_weights.max():.2e}, mean={attn_weights.mean():.2e}, has_nan={torch.isnan(attn_weights).any()}")
+            # You might want to inspect Q, K, V from within self_attn if this is where NaNs appear
+            raise ValueError("NaN from self_attn_output") # Stop execution here to inspect
+        # logger.info(f"After Self-Attn - min={src2_attn_output.min():.2e}, max={src2_attn_output.max():.2e}, mean={src2_attn_output.mean():.2e}, has_nan={torch.isnan(src2_attn_output).any()}")
+
+
+        # --- Add & Norm (first residual connection) ---
+        src_after_dropout1 = self.dropout1(src2_attn_output)
+        if torch.isnan(src_after_dropout1).any():
+            logger.error(f"!!! NAN after self_attn_dropout !!!")
+            raise ValueError("NaN from self_attn_dropout")
         
-        # Add & Norm (first residual connection)
-        src = src + self.dropout1(src2)
-        src = self.norm1(src)
+        src_res1 = src + src_after_dropout1
+        if torch.isnan(src_res1).any():
+            logger.error(f"!!! NAN after first residual add !!!")
+            logger.error(f"  src             - min={src.min():.2e}, max={src.max():.2e}, has_nan={torch.isnan(src).any()}")
+            logger.error(f"  src_after_drop1 - min={src_after_dropout1.min():.2e}, max={src_after_dropout1.max():.2e}, has_nan={torch.isnan(src_after_dropout1).any()}")
+            raise ValueError("NaN from first residual add")
+
+        src_norm1 = self.norm1(src_res1)
+        if torch.isnan(src_norm1).any():
+            logger.error(f"!!! NAN after first LayerNorm (norm1) !!!")
+            logger.error(f"  Input to norm1 (src_res1) - min={src_res1.min():.2e}, max={src_res1.max():.2e}, mean={src_res1.mean():.2e}, has_nan={torch.isnan(src_res1).any()}")
+            # Check LayerNorm weights/bias
+            logger.error(f"  norm1.weight - min={self.norm1.weight.min():.2e}, max={self.norm1.weight.max():.2e}")
+            logger.error(f"  norm1.bias   - min={self.norm1.bias.min():.2e}, max={self.norm1.bias.max():.2e}")
+            raise ValueError("NaN from first LayerNorm")
+        # logger.info(f"After Norm1 - min={src_norm1.min():.2e}, max={src_norm1.max():.2e}, mean={src_norm1.mean():.2e}, has_nan={torch.isnan(src_norm1).any()}")
+
+
+        # --- Feed forward block ---
+        ff_hidden = self.activation(self.linear1(src_norm1))
+        if torch.isnan(ff_hidden).any():
+            logger.error(f"!!! NAN after FFN activation(linear1) !!!")
+            logger.error(f"  Input to FFN (src_norm1) - min={src_norm1.min():.2e}, max={src_norm1.max():.2e}, mean={src_norm1.mean():.2e}, has_nan={torch.isnan(src_norm1).any()}")
+            logger.error(f"  linear1.weight norm: {self.linear1.weight.norm().item():.2e}")
+            raise ValueError("NaN from FFN linear1/activation")
         
-        # Feed forward block
-        src2 = self.linear2(self.dropout(self.activation(self.linear1(src))))
-        
-        # Add & Norm (second residual connection)
-        src = src + self.dropout2(src2)
-        src = self.norm2(src)
-        
-        return src
-    
+        src2_ff_output = self.linear2(self.dropout(ff_hidden))
+        if torch.isnan(src2_ff_output).any():
+            logger.error(f"!!! NAN after FFN linear2(dropout(activation(linear1))) !!!")
+            raise ValueError("NaN from FFN linear2/dropout")
+        # logger.info(f"After FFN - min={src2_ff_output.min():.2e}, max={src2_ff_output.max():.2e}, mean={src2_ff_output.mean():.2e}, has_nan={torch.isnan(src2_ff_output).any()}")
+
+
+        # --- Add & Norm (second residual connection) ---
+        src_after_dropout2 = self.dropout2(src2_ff_output)
+        if torch.isnan(src_after_dropout2).any():
+            logger.error(f"!!! NAN after FFN_dropout !!!")
+            raise ValueError("NaN from FFN_dropout")
+
+        src_res2 = src_norm1 + src_after_dropout2 # Residual from AFTER first norm
+        if torch.isnan(src_res2).any():
+            logger.error(f"!!! NAN after second residual add !!!")
+            raise ValueError("NaN from second residual add")
+
+        src_norm2 = self.norm2(src_res2)
+        if torch.isnan(src_norm2).any():
+            logger.error(f"!!! NAN after second LayerNorm (norm2) !!!")
+            logger.error(f"  Input to norm2 (src_res2) - min={src_res2.min():.2e}, max={src_res2.max():.2e}, mean={src_res2.mean():.2e}, has_nan={torch.isnan(src_res2).any()}")
+            raise ValueError("NaN from second LayerNorm")
+        # logger.info(f"Layer Output - min={src_norm2.min():.2e}, max={src_norm2.max():.2e}, mean={src_norm2.mean():.2e}, has_nan={torch.isnan(src_norm2).any()}")
+
+        return src_norm2
+
     def get_orthogonality_penalty(self):
         """Return the orthogonality penalty from the OSPA attention."""
         return self.self_attn.get_orthogonality_penalty()
