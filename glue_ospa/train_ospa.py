@@ -323,103 +323,70 @@ def load_and_preprocess_data(args):
         # This case should be caught by argument parsing, but defensive
         raise ValueError(f"Unsupported task type specified: {args.task}")
 
+# In train_ospa.py
+
 # --- Training Epoch Function ---
-def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch, tokenizer): # tokenizer might not be needed here
+def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch, tokenizer): # tokenizer passed for pad_token_id if needed
     model.train()
     total_loss = 0.0
     num_batches = len(dataloader)
     progress_bar = tqdm(dataloader, desc=f"Epoch {epoch}/{args.epochs} Training", leave=False)
 
-    for batch_idx, batch_data in enumerate(progress_bar): # Rename batch to batch_data
-        # --- Move batch to device based on task ---
-        input_ids, attention_mask, labels = None, None, None
+    for batch_idx, batch_data in enumerate(progress_bar):
+        # --- Move batch to device ---
+        # After .set_format("torch"), batches from DataLoader should be dictionaries
         try:
-            if args.task == 'lm':
-                # LM batches are dictionaries from datasets.map(group_texts)
-                input_ids = batch_data['input_ids'].to(args.device)
-                # attention_mask is usually all 1s for LM blocks from group_texts, but good to have
-                attention_mask = batch_data.get('attention_mask', torch.ones_like(input_ids)).to(args.device)
-                labels = batch_data['labels'].to(args.device)
-            elif args.task == 'glue':
-                # Add this condition at the beginning of the GLUE case
-                if isinstance(batch_data, dict):
-                    # Dictionary format from HuggingFace datasets
-                    input_ids = batch_data['input_ids'].to(args.device)
-                    attention_mask = batch_data.get('attention_mask', torch.ones_like(input_ids)).to(args.device)
-                    labels = batch_data['labels'].to(args.device)
+            if not isinstance(batch_data, dict):
+                logger.error(f"Batch {batch_idx} is not a dictionary (type: {type(batch_data)}). Check data processing. Skipping.")
+                continue
 
-                # GLUE batches are tuples (input_features, labels) from your collate_fn
-                # input_features is already [SeqLen, BatchSize]
-                # labels is [BatchSize]
-                # The tokenizer in preprocess_glue already creates input_ids and attention_mask
-                # So, your collate_fn for GLUE should ideally return a dict like the LM one
-                # OR you unpack the tuple here
-                elif isinstance(batch_data, (list, tuple)) and len(batch_data) == 2:
-                    # Assuming batch_data[0] contains tokenized inputs (potentially a dict itself or a tensor)
-                    # And batch_data[1] contains labels
-                    
-                    # If your GLUE collate_fn returns a dict from tokenizer:
-                    # input_ids = batch_data[0]['input_ids'].to(args.device)
-                    # attention_mask = batch_data[0]['attention_mask'].to(args.device)
-                    # labels = batch_data[1].to(args.device)
-
-                    # *** If your GLUE collate_fn returns (text_tensor, label_tensor) as in your code: ***
-                    text_tensor, label_tensor = batch_data
-                    input_ids = text_tensor.to(args.device) # text_tensor is already [SeqLen, BatchSize]
-                    labels = label_tensor.to(args.device)
-                    # We need attention_mask for GLUE based on padding.
-                    # This should be generated in collate_fn OR derived here if pad_idx is known
-                    pad_idx = tokenizer.pad_token_id # Get pad_token_id from the HF tokenizer
-                    if pad_idx is None:
-                        logger.warning("PAD token ID not found in tokenizer. Padding mask will not be effective.")
-                        attention_mask = torch.ones_like(input_ids, device=args.device, dtype=torch.long) # Assume no padding
-                    else:
-                        # Create attention_mask: 1 for non-pad, 0 for pad
-                        # input_ids is [SeqLen, BatchSize]
-                        attention_mask = (input_ids != pad_idx).long()
-                        # The model's forward pass expects key_padding_mask as [BatchSize, SeqLen] with True for PAD
-                        # We pass attention_mask which is [SeqLen, BatchSize] with 1 for real token
-                        # The model's forward pass needs to handle this conversion if it expects key_padding_mask
-                else:
-                    logger.error(f"Unexpected batch format for GLUE task: {type(batch_data)}. Expected tuple of (inputs, labels) or dict.")
+            input_ids = batch_data['input_ids'].to(args.device)
+            # attention_mask is crucial, tokenizer should always provide it
+            attention_mask = batch_data.get('attention_mask')
+            if attention_mask is None:
+                # This can happen for LM if all sequences in a block are full and tokenizer didn't add one.
+                # For GLUE with padding="max_length", it should always be present.
+                if args.task == 'glue':
+                    logger.error(f"Batch {batch_idx} missing 'attention_mask' for GLUE task. This is required. Skipping.")
                     continue
+                else: # For LM, if no mask, assume all valid (no padding in the block)
+                    attention_mask = torch.ones_like(input_ids, device=args.device)
             else:
-                logger.error(f"Unknown task '{args.task}' for batch processing.")
-                continue
-            
-            if input_ids is None: # Check if processing failed
-                logger.warning(f"Batch {batch_idx} could not be processed for device transfer. Skipping.")
-                continue
+                attention_mask = attention_mask.to(args.device)
 
+            labels = batch_data['labels'].to(args.device)
+            # token_type_ids = batch_data.get('token_type_ids') # Optional, for sentence-pair tasks
+            # if token_type_ids is not None:
+            #     token_type_ids = token_type_ids.to(args.device)
+
+        except KeyError as e:
+            logger.error(f"Missing key {e} in batch {batch_idx}. Batch keys: {batch_data.keys()}. Skipping.")
+            continue
         except Exception as e:
             logger.warning(f"Could not process or move batch {batch_idx} to device {args.device}: {e}. Skipping batch.")
             continue
         # -----------------------------------------
 
-        # --- Gradient Accumulation: Zero Grads ---
         if batch_idx % args.gradient_accumulation_steps == 0:
             optimizer.zero_grad(set_to_none=True)
 
         try:
-            # --- Forward Pass ---
-            # Model now expects input_ids and attention_mask (HF style)
-            # The model's forward should internally derive src_key_padding_mask from attention_mask
-            # and generate causal_mask if task is 'lm'
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+            # Pass attention_mask to the model. The model's forward should handle
+            # converting it to src_key_padding_mask and generating causal_mask if task is LM.
+            outputs = model(input_ids=input_ids, attention_mask=attention_mask) # No token_type_ids passed for simplicity unless model handles it
 
-            # ... (rest of your train_epoch loop: NaN check, loss, penalty, backward, step, logging) ...
-            # Make sure loss calculation uses the correct labels and output shapes:
+            # Loss calculation
             if args.task == 'lm':
                 loss = criterion(outputs.view(-1, model.vocab_size), labels.view(-1))
             elif args.task == 'glue':
                 if args.is_regression:
                     loss = criterion(outputs.squeeze(), labels.float())
                 else:
-                    loss = criterion(outputs, labels) # labels are already [BatchSize]
+                    loss = criterion(outputs, labels)
             else:
                 raise ValueError("Invalid task for loss calculation")
 
-
+            # OSPA Penalty
             if model.transformer_type == "ospa" and model.orth_mode == "regularize":
                 orth_penalty = model.get_orthogonality_penalty()
                 if not (torch.isnan(orth_penalty).any() or torch.isinf(orth_penalty).any()):
@@ -431,41 +398,37 @@ def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch,
                 loss = loss / args.gradient_accumulation_steps
             loss.backward()
 
-            is_accumulation_step = (batch_idx + 1) % args.gradient_accumulation_steps == 0
-            is_last_batch = (batch_idx + 1) == num_batches
-            if is_accumulation_step or is_last_batch:
+            if (batch_idx + 1) % args.gradient_accumulation_steps == 0 or (batch_idx + 1) == num_batches:
                 torch.nn.utils.clip_grad_norm_(model.parameters(), args.clip)
                 optimizer.step()
-                if args.scheduler_update_every_step:
-                     if scheduler and hasattr(scheduler, 'step'):
-                         scheduler.step()
+                if args.scheduler_update_every_step and scheduler:
+                     scheduler.step()
 
             current_unscaled_loss = loss.item() * args.gradient_accumulation_steps
             total_loss += current_unscaled_loss
-            progress_bar.set_postfix(loss=f"{current_unscaled_loss:.4f}", lr=f"{scheduler.get_last_lr()[0]:.6f}" if scheduler else f"{optimizer.param_groups[0]['lr']:.6f}")
+            current_lr = scheduler.get_last_lr()[0] if scheduler else optimizer.param_groups[0]['lr']
+            progress_bar.set_postfix(loss=f"{current_unscaled_loss:.4f}", lr=f"{current_lr:.6f}")
 
 
         except RuntimeError as e:
             if "CUDA out of memory" in str(e):
-                logger.error(f"CUDA OOM encountered in training (Epoch {epoch}, Batch {batch_idx}). Try reducing batch size or model size.")
+                logger.error(f"CUDA OOM in training (Epoch {epoch}, Batch {batch_idx}).")
                 raise e
             else:
-                logger.error(f"Runtime error during training (Epoch {epoch}, Batch {batch_idx}): {e}")
+                logger.error(f"Runtime error in training (Epoch {epoch}, Batch {batch_idx}): {e}", exc_info=True)
                 optimizer.zero_grad(set_to_none=True)
                 continue
 
-    if not args.scheduler_update_every_step:
-         if scheduler and hasattr(scheduler, 'step'):
-             scheduler.step()
+    if not args.scheduler_update_every_step and scheduler:
+         scheduler.step()
 
     avg_epoch_loss = total_loss / num_batches if num_batches > 0 else float('inf')
     logger.info(f"Epoch {epoch} Training Average Loss: {avg_epoch_loss:.4f}")
     return avg_epoch_loss
 
 
-# --- Evaluation Function ---
-def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, eval_metric=None, eval_type="Validation"): # Added tokenizer
-    """Evaluates the model on a given dataloader."""
+# --- Evaluation Function (evaluate_model_on_epoch) ---
+def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, hf_eval_metric=None, eval_type="Validation"):
     model.eval()
     total_loss = 0.0
     all_preds = []
@@ -474,45 +437,37 @@ def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, eval_
     progress_bar = tqdm(dataloader, desc=f"{eval_type} Evaluating", leave=False)
 
     with torch.no_grad():
-        for batch_idx, batch_data in enumerate(progress_bar): # Rename batch
-            # --- Move batch to device based on task ---
-            input_ids, attention_mask, labels = None, None, None
+        for batch_idx, batch_data in enumerate(progress_bar):
+            # --- Move batch to device ---
             try:
-                if args.task == 'lm':
-                    input_ids = batch_data['input_ids'].to(args.device)
-                    attention_mask = batch_data.get('attention_mask', torch.ones_like(input_ids)).to(args.device)
-                    labels = batch_data['labels'].to(args.device)
-                elif args.task == 'glue':
-                    if isinstance(batch_data, (list, tuple)) and len(batch_data) == 2:
-                        text_tensor, label_tensor = batch_data
-                        input_ids = text_tensor.to(args.device)
-                        labels = label_tensor.to(args.device)
-                        pad_idx = tokenizer.pad_token_id
-                        if pad_idx is None:
-                            attention_mask = torch.ones_like(input_ids, device=args.device, dtype=torch.long)
-                        else:
-                            attention_mask = (input_ids != pad_idx).long()
-                    else:
-                        logger.error(f"Unexpected batch format for GLUE task: {type(batch_data)} during eval. Expected tuple.")
+                if not isinstance(batch_data, dict):
+                    logger.error(f"Eval Batch {batch_idx} is not dict (type: {type(batch_data)}). Skipping.")
+                    continue
+                input_ids = batch_data['input_ids'].to(args.device)
+                attention_mask = batch_data.get('attention_mask')
+                if attention_mask is None:
+                    if args.task == 'glue': # GLUE should always have attention_mask from tokenizer
+                        logger.error(f"Eval Batch {batch_idx} missing 'attention_mask' for GLUE. Skipping.")
                         continue
+                    else: # For LM, if no mask, assume all valid
+                        attention_mask = torch.ones_like(input_ids, device=args.device)
                 else:
-                    logger.error(f"Unknown task '{args.task}' for batch processing during eval.")
-                    continue
-                
-                if input_ids is None:
-                    logger.warning(f"Eval Batch {batch_idx} could not be processed for device transfer. Skipping.")
-                    continue
+                    attention_mask = attention_mask.to(args.device)
+                labels = batch_data['labels'].to(args.device)
+                # token_type_ids = batch_data.get('token_type_ids')
+                # if token_type_ids is not None: token_type_ids = token_type_ids.to(args.device)
 
+            except KeyError as e:
+                logger.error(f"Missing key {e} in eval batch {batch_idx}. Keys: {batch_data.keys()}. Skipping.")
+                continue
             except Exception as e:
-                logger.warning(f"Could not process or move eval batch {batch_idx} to device {args.device}: {e}. Skipping.")
+                logger.warning(f"Could not process/move eval batch {batch_idx} to {args.device}: {e}. Skipping.")
                 continue
             # -----------------------------------------
 
             try:
-                # --- Forward Pass ---
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask)
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask) # Pass attention_mask
 
-                # ... (rest of your evaluate function: NaN check, loss, metric calculation) ...
                 if torch.isnan(outputs).any() or torch.isinf(outputs).any():
                     logger.warning(f"NaN or Inf detected in {eval_type} output. Skipping batch.")
                     continue
@@ -530,30 +485,37 @@ def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, eval_
                     all_preds.extend(predictions.cpu().numpy())
                     all_refs.extend(labels.cpu().numpy())
                 else:
-                    raise ValueError("Invalid task for loss calculation")
+                    raise ValueError("Invalid task for loss calculation in eval")
 
                 if loss is not None:
                     total_loss += loss.item()
 
             except RuntimeError as e:
-                logger.error(f"Runtime error during {eval_type}: {e}")
+                logger.error(f"Runtime error during {eval_type}: {e}", exc_info=True)
                 continue
 
     avg_loss = total_loss / num_batches if num_batches > 0 else float('inf')
     results = {"loss": avg_loss}
 
-    if args.task == 'glue' and eval_metric is not None and all_preds:
+    if args.task == 'glue' and hf_eval_metric is not None and all_preds:
         try:
-            metric_results = eval_metric.compute(predictions=all_preds, references=all_refs)
-            metric_results = {f"glue_{k}": v for k,v in metric_results.items()}
-            results.update(metric_results)
-            logger.info(f"{eval_type} Metrics: {metric_results}")
+            metric_results = hf_eval_metric.compute(predictions=all_preds, references=all_refs)
+            # Flatten metric results if they are dicts themselves (e.g. F1 for MRPC/QQP)
+            flat_metric_results = {}
+            for k, v in metric_results.items():
+                if isinstance(v, dict): # Some metrics like f1 might return a dict
+                    for sub_k, sub_v in v.items():
+                        flat_metric_results[f"glue_{k}_{sub_k}"] = sub_v
+                else:
+                    flat_metric_results[f"glue_{k}"] = v
+            results.update(flat_metric_results)
+            logger.info(f"{eval_type} Metrics: {flat_metric_results}")
         except Exception as e:
             logger.error(f"Failed to compute GLUE metrics for {args.glue_task}: {e}")
 
     if args.task == 'lm':
         try:
-            perplexity = math.exp(min(avg_loss, 700))
+            perplexity = math.exp(min(avg_loss, 700)) # Cap loss to prevent overflow in exp
             results["perplexity"] = perplexity
             logger.info(f"{eval_type} Perplexity: {perplexity:.2f}")
         except OverflowError:
@@ -562,6 +524,9 @@ def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, eval_
 
     logger.info(f"{eval_type} Average Loss: {avg_loss:.4f}")
     return results
+
+# The main(), load_and_preprocess_data(), and argparser functions would remain the same as your last complete version.
+# Ensure main() calls train_epoch and evaluate_model_on_epoch with the `tokenizer` argument.
 
 # --- Main Training Script ---
 def main(args):
