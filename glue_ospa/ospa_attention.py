@@ -233,11 +233,17 @@ class OSPAMultiHeadAttention(nn.Module):
                      logger.error(f"  key_padding_mask for batch item {b_idx_in_minibatch.item()} (within this minibatch): {key_padding_mask[b_idx_in_minibatch.item()]}")
                 #  for b_idx in problematic_indices[:,0].unique(): # Iterate through unique batch indices with problems
                 #      logger.error(f"  key_padding_mask for batch item {b_idx.item()}: {key_padding_mask[b_idx.item()]}")
-            if attn_mask is not None: # Causal mask for LM, typically
-                 # attn_mask might be [tgt_len, src_len]
-                 # For a problematic query_pos, inspect its row in attn_mask
-                 for b, h, q_pos in problematic_indices.tolist():
-                     logger.error(f"  attn_mask row for query_pos {q_pos} (if applicable): {attn_mask[q_pos] if attn_mask.dim()==2 and q_pos < attn_mask.shape[0] else 'Mask not 2D or q_pos out of bounds'}")
+            if attn_mask is not None:
+                logger.error(f"  Content of attn_mask (shape {attn_mask.shape}): {attn_mask}")
+            else:
+                logger.error(f"  attn_mask was None.")
+            raise ValueError("Softmax input has all -inf row")
+
+            # if attn_mask is not None: # Causal mask for LM, typically
+            #      # attn_mask might be [tgt_len, src_len]
+            #      # For a problematic query_pos, inspect its row in attn_mask
+            #      for b, h, q_pos in problematic_indices.tolist():
+            #          logger.error(f"  attn_mask row for query_pos {q_pos} (if applicable): {attn_mask[q_pos] if attn_mask.dim()==2 and q_pos < attn_mask.shape[0] else 'Mask not 2D or q_pos out of bounds'}")
             # This is where you'd raise the error or handle it if you have a specific strategy
             # raise ValueError("NaN from softmax due to all -inf row") # Keep this for now
 
