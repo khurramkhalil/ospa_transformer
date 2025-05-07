@@ -86,7 +86,7 @@ GLUE_TASKS=(
 
 # Define Model Variants to run
 VARIANTS=(
-    "vanilla;init;0.0"
+    # "vanilla;init;0.0"
     "ospa;init;0.0"
     "ospa;regularize;0.001" # Use the lambda that worked well
     "ospa;strict;0.0"
