@@ -171,7 +171,7 @@ class TransformerModel(nn.Module):
         embeds = self.token_encoder(input_ids) * self.embedding_scale
         src_pos = self.pos_encoder(embeds) # Output: [SeqLen, BatchSize, Dim]
         
-        print(f"Batch {batch_idx_for_debug} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
+        logger.debug(f"Batch {batch_idx_for_debug} - src_pos: min={src_pos.min().item():.2e}, max={src_pos.max().item():.2e}, mean={src_pos.mean().item():.2e}, has_nan={torch.isnan(src_pos).any()}")
 
         if torch.isnan(src_pos).any():
             logger.error("NaN detected after embedding/positional encoding!")
@@ -233,7 +233,7 @@ class TransformerModel(nn.Module):
             batch_idx_for_debug=batch_idx_for_debug # Pass it down
         )
         # Output shape: [seq_len, batch_size, d_model]
-        print(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - transformer_output: min={transformer_output.min().item():.2e}, max={transformer_output.max().item():.2e}, mean={transformer_output.mean().item():.2e}, has_nan={torch.isnan(transformer_output).any()}")
+        logger.debug(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - transformer_output: min={transformer_output.min().item():.2e}, max={transformer_output.max().item():.2e}, mean={transformer_output.mean().item():.2e}, has_nan={torch.isnan(transformer_output).any()}")
 
         if torch.isnan(transformer_output).any():
             logger.error("NaN detected after transformer encoder layers!")
