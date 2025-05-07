@@ -390,7 +390,7 @@ class VanillaTransformer(nn.Module):
         # Initialize parameters
         self._reset_parameters()
         
-    def forward(self, src, src_mask=None, src_key_padding_mask=None):
+    def forward(self, src, src_mask=None, src_key_padding_mask=None, batch_idx_for_debug: int = -1):
         """
         Args:
             src: source sequence [src_len, batch_size, embed_dim]
