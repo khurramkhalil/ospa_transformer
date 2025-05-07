@@ -450,7 +450,10 @@ def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, hf_ev
             # # -----------------------------------------
 
             try:
-                outputs = model(input_ids=input_ids, attention_mask=attention_mask, batch_idx_for_debug=batch_idx) # Pass attention_mask
+                if args.transformer_type == "vanilla":
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask) # Pass attention_mask
+                else:
+                    outputs = model(input_ids=input_ids, attention_mask=attention_mask, batch_idx_for_debug=batch_idx) # Pass attention_mask
 
                 if torch.isnan(outputs).any() or torch.isinf(outputs).any():
                     logger.warning(f"NaN or Inf detected in {eval_type} output. Skipping batch.")
