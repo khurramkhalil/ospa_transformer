@@ -2,15 +2,16 @@
 #SBATCH --partition=rss-gpu       # Your GPU partition
 #SBATCH -N 1                      # Number of nodes
 #SBATCH -c 16                     # Number of CPU cores per task (adjust based on dataloader/analysis needs)
-#SBATCH --mem=100G                # Memory per node (adjust based on model size/data)
+#SBATCH --mem=60G                # Memory per node (adjust based on model size/data)
 #SBATCH --gres=gpu:A100:1         # Request 1 A100 GPU (adjust type/count if needed)
 #SBATCH --export=all
+#SBATCH --out=OSPA_Pipeline-%j.out
 #SBATCH --job-name=OSPA_Pipeline  # Job name reflecting the pipeline
-#SBATCH --output=logs/OSPA_Pipeline_%j.out # Combined output log
-#SBATCH --error=logs/OSPA_Pipeline_%j.err  # Combined error log
+#SBATCH --output=OSPA_Pipeline_%j.out # Combined output log
+#SBATCH --error=OSPA_Pipeline_%j.err  # Combined error log
 #SBATCH --time=72:00:00           # Max runtime (adjust as needed)
 #SBATCH --mail-user=khurram.khalil@missouri.edu # Your email
-#SBATCH --mail-type=FAIL,END      # Notify on failure or completion
+#SBATCH --mail-type=ALL      # Notify on failure or completion
 
 # --- Environment Setup ---
 set -e # Exit immediately if a command exits with a non-zero status.
