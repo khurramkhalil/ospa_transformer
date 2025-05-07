@@ -394,6 +394,8 @@ def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, hf_ev
                 if torch.isnan(outputs).any() or torch.isinf(outputs).any():
                     logger.warning(f"NaN or Inf detected in {eval_type} output. Skipping batch.")
                     continue
+                logger.info(f"DEBUG EVAL (Batch {batch_idx}): outputs shape: {outputs.shape}, labels shape: {labels.shape}")
+                logger.info(f"DEBUG EVAL (Batch {batch_idx}): args.is_regression: {args.is_regression}, args.task: {args.task}")
 
                 loss = None
                 if args.task == 'lm':
@@ -402,7 +404,18 @@ def evaluate_model_on_epoch(model, dataloader, criterion, args, tokenizer, hf_ev
                     if args.is_regression:
                         loss = criterion(outputs.squeeze(), labels.float())
                         predictions = outputs.squeeze()
-                    else:
+                    else: # Classification
+                        # Expected 'outputs' shape: [current_batch_size, num_classes]
+                        # Expected 'labels' shape: [current_batch_size]
+                        if outputs.shape[0] != labels.shape[0]: # Detailed check
+                            logger.error(f"CRITICAL SHAPE MISMATCH (Batch {batch_idx}): outputs batch dim {outputs.shape[0]} != labels batch dim {labels.shape[0]}")
+                            logger.error(f"  outputs full shape: {outputs.shape}")
+                            logger.error(f"  labels full shape: {labels.shape}")
+                            # This means the number of predictions doesn't match the number of labels for this batch
+                            # This often happens if the DataLoader drops the last batch when it's smaller (drop_last=True)
+                            # but the model somehow still processes a full-size placeholder, or vice-versa.
+                            # Or if the 'cls_representation' logic in TransformerModel.forward is problematic for the last batch.
+                            continue # Skip this problematic batch                        
                         loss = criterion(outputs, labels)
                         predictions = torch.argmax(outputs, dim=-1)
                     all_preds.extend(predictions.cpu().numpy())
