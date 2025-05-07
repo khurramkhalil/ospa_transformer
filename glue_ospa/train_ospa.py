@@ -263,24 +263,52 @@ def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch,
                 logger.error(f"Batch {batch_idx} is not a dictionary (type: {type(batch_data)}). Check data processing. Skipping.")
                 continue
 
-            input_ids = batch_data['input_ids'].to(args.device)
-            # attention_mask is crucial, tokenizer should always provide it
-            attention_mask = batch_data.get('attention_mask')
-            if attention_mask is None:
+            # Data from HF DataLoader is typically Batch first [B, S]
+            input_ids_batch_first = batch_data['input_ids'].to(args.device)
+            attention_mask_batch_first = batch_data.get('attention_mask')
+            if attention_mask_batch_first is None: # ... (handle missing mask) ...
                 # This can happen for LM if all sequences in a block are full and tokenizer didn't add one.
                 # For GLUE with padding="max_length", it should always be present.
                 if args.task == 'glue':
                     logger.error(f"Batch {batch_idx} missing 'attention_mask' for GLUE task. This is required. Skipping.")
                     continue
                 else: # For LM, if no mask, assume all valid (no padding in the block)
-                    attention_mask = torch.ones_like(input_ids, device=args.device)
+                    attention_mask_batch_first = torch.ones_like(input_ids_batch_first, device=args.device)
             else:
-                attention_mask = attention_mask.to(args.device)
+                attention_mask_batch_first = attention_mask_batch_first.to(args.device)
 
-            labels = batch_data['labels'].to(args.device)
-            # token_type_ids = batch_data.get('token_type_ids') # Optional, for sentence-pair tasks
-            # if token_type_ids is not None:
-            #     token_type_ids = token_type_ids.to(args.device)
+            attention_mask_batch_first = attention_mask_batch_first.to(args.device)
+            labels = batch_data['labels'].to(args.device) # Labels are usually [B]
+
+            # --- TRANSPOSE inputs for Seq-first models ---
+            input_ids = input_ids_batch_first.transpose(0, 1).contiguous() # [S, B]
+            attention_mask = attention_mask_batch_first # Keep as [B, S] for padding mask generation later
+
+
+            # input_ids = batch_data['input_ids'].to(args.device)
+            # # attention_mask is crucial, tokenizer should always provide it
+            # attention_mask = batch_data.get('attention_mask')
+            # if attention_mask is None:
+            #     # This can happen for LM if all sequences in a block are full and tokenizer didn't add one.
+            #     # For GLUE with padding="max_length", it should always be present.
+            #     if args.task == 'glue':
+            #         logger.error(f"Batch {batch_idx} missing 'attention_mask' for GLUE task. This is required. Skipping.")
+            #         continue
+            #     else: # For LM, if no mask, assume all valid (no padding in the block)
+            #         attention_mask = torch.ones_like(input_ids, device=args.device)
+            # else:
+            #     attention_mask = attention_mask.to(args.device)
+
+            # labels = batch_data['labels'].to(args.device)
+            # # token_type_ids = batch_data.get('token_type_ids') # Optional, for sentence-pair tasks
+            # # if token_type_ids is not None:
+            # #     token_type_ids = token_type_ids.to(args.device)
+
+            # Check shapes after transpose
+            if batch_idx == 0 : # Log first batch shapes
+                 logger.info(f"DEBUG BATCH 0 - input_ids shape (after transpose): {input_ids.shape}")
+                 logger.info(f"DEBUG BATCH 0 - attention_mask shape (original): {attention_mask.shape}")
+                 logger.info(f"DEBUG BATCH 0 - labels shape: {labels.shape}")
 
         except KeyError as e:
             logger.error(f"Missing key {e} in batch {batch_idx}. Batch keys: {batch_data.keys()}. Skipping.")

@@ -201,19 +201,11 @@ class TransformerModel(nn.Module):
                 attention_mask_bs_first = attention_mask.transpose(0, 1) # Convert to [BatchSize, SeqLen]
             elif attention_mask.shape == (batch_size, seq_len):
                 attention_mask_bs_first = attention_mask
+                src_key_padding_mask = (attention_mask == 0)
             else:
                 logger.error(f"Unexpected attention_mask shape: {attention_mask.shape}. Expected ({seq_len}, {batch_size}) or ({batch_size}, {seq_len}). Cannot create padding mask.")
                 attention_mask_bs_first = None # Cannot proceed safely
-            if batch_idx_for_debug in [44, 127]: # Or other problematic indices
-                logger.info(f"DEBUG (Batch {batch_idx_for_debug}): Input attention_mask (HF format, shape {attention_mask_bs_first.shape if attention_mask_bs_first is not None else 'None'}): {attention_mask_bs_first}")
 
-            if attention_mask_bs_first is not None:
-                src_key_padding_mask = (attention_mask_bs_first == 0)
-                if batch_idx_for_debug in [44, 127] and src_key_padding_mask is not None:
-                    logger.info(f"DEBUG (Batch {batch_idx_for_debug}): Derived src_key_padding_mask (PyTorch format, shape {src_key_padding_mask.shape}): {src_key_padding_mask}")
-            # if attention_mask_bs_first is not None:
-            #     src_key_padding_mask = (attention_mask_bs_first == 0) # True where attention_mask is 0 (pad)
-                
         else:
             # If no attention_mask is provided, assume no padding.
             # This might happen for LM if all sequences in a block are full.
