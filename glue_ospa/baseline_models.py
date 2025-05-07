@@ -149,7 +149,7 @@ class LinformerSelfAttention(nn.Module):
         nn.init.xavier_uniform_(self.F)
         
     def forward(self, query, key, value, key_padding_mask=None, need_weights=True,
-                attn_mask=None, average_attn_weights=True):
+                attn_mask=None, average_attn_weights=True, batch_idx_for_debug: int = -1):
         """
         Input shape: Time x Batch x Channel (T x B x C)
         """
