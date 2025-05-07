@@ -39,14 +39,6 @@ except ImportError:
     print("It needs to be adapted to handle 'input_ids' and 'attention_mask'.")
     exit(1)
 
-# --- Setup Logging ---
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler(sys.stdout)] # Log to console
-)
-logger = logging.getLogger(__name__)
-
 
 def load_and_preprocess_data(args):
     """Loads and preprocesses data for LM or GLUE tasks using transformers."""
@@ -788,7 +780,17 @@ if __name__ == "__main__":
                         help='Directory to save model checkpoints and results JSON.')
     parser.add_argument('--save', type=str, default='best_model.pt',
                         help='Filename for saving the best model checkpoint within the output directory.')
-
+    parser.add_argument('--loglevel', default='ERROR', choices=['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'],
+                    help="Set the logging level (default: ERROR)")
 
     args = parser.parse_args()
+
+    # --- Setup Logging ---
+    logging.basicConfig(
+        level=getattr(logging, args.loglevel),
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler(sys.stdout)] # Log to console
+    )
+    logger = logging.getLogger(__name__)
+
     main(args)
