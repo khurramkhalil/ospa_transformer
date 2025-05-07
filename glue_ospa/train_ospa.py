@@ -316,7 +316,10 @@ def train_epoch(model, dataloader, optimizer, criterion, scheduler, args, epoch,
         try:
             # Pass attention_mask to the model. The model's forward should handle
             # converting it to src_key_padding_mask and generating causal_mask if task is LM.
-            outputs = model(input_ids=input_ids, attention_mask=attention_mask, batch_idx_for_debug=batch_idx) # No token_type_ids passed for simplicity unless model handles it
+            if args.transformer_type == "vanilla":
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask) # No token_type_ids passed for simplicity unless model handles it
+            else:
+                outputs = model(input_ids=input_ids, attention_mask=attention_mask, batch_idx_for_debug=batch_idx) # No token_type_ids passed for simplicity unless model handles it
 
             # Loss calculation
             if args.task == 'lm':
