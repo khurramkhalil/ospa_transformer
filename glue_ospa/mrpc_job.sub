@@ -2,7 +2,7 @@
 #SBATCH --partition=rss-gpu       # Your GPU partition
 #SBATCH -N 1                      # Number of nodes
 #SBATCH -c 14                     # Number of CPU cores per task (adjust based on dataloader/analysis needs)
-#SBATCH --mem=60G                # Memory per node (adjust based on model size/data)
+#SBATCH --mem=40G                # Memory per node (adjust based on model size/data)
 #SBATCH --gres=gpu:A100:1         # Request 1 A100 GPU (adjust type/count if needed)
 #SBATCH --export=all
 #SBATCH --out=OSPA_Pipeline-%j.out
