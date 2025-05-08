@@ -91,7 +91,7 @@ VARIANTS=(
     "vanilla;init;0.0"
     "ospa;init;0.0"
     "ospa;regularize;0.001" # Use the lambda that worked well
-    # "ospa;strict;0.0"
+    "ospa;strict;0.0"
 )
 
 # --- Function Definitions ---
@@ -244,8 +244,7 @@ run_analysis_for_config() {
         --output_dir \"$config_analysis_dir\" \
         --d_model $d_model \
         --nhead $nhead \
-        --nlayers $nlayers \
-        --device cpu" # Analysis on CPU
+        --nlayers $nlayers"
 
     log_message "Executing Comparison Command for ${task_label}_${size_name}:"
     echo "$compare_cmd" | tee -a "$MAIN_LOG"

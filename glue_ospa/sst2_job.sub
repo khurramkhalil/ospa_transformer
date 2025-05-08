@@ -72,7 +72,7 @@ CONFIGS=(
 
 # Define tasks to run
 TASKS=(
-    # "lm"
+    "lm"
     "glue"
 )
 
@@ -244,8 +244,7 @@ run_analysis_for_config() {
         --output_dir \"$config_analysis_dir\" \
         --d_model $d_model \
         --nhead $nhead \
-        --nlayers $nlayers \
-        --device cpu" # Analysis on CPU
+        --nlayers $nlayers"
 
     log_message "Executing Comparison Command for ${task_label}_${size_name}:"
     echo "$compare_cmd" | tee -a "$MAIN_LOG"
