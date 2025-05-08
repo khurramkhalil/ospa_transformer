@@ -32,6 +32,8 @@ mkdir -p "${BASE_OUTPUT_DIR}/logs"
 # Main log file for the entire job
 MAIN_LOG="${BASE_OUTPUT_DIR}/logs/pipeline_progress_${SLURM_JOB_ID}.log"
 
+ANALYSIS_DIR="$BASE_OUTPUT_DIR/analysis" 
+mkdir -p "$ANALYSIS_DIR"
 # Scripts
 TRAIN_SCRIPT="train_ospa.py"
 ANALYZE_SCRIPT="analyze_head_diversity.py"
