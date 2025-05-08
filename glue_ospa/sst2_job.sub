@@ -9,7 +9,7 @@
 #SBATCH --job-name=OSPA_Pipeline  # Job name reflecting the pipeline
 #SBATCH --output=OSPA_Pipeline_%j.txt # Combined output log
 #SBATCH --error=OSPA_Pipeline_%j.txt  # Combined error log
-#SBATCH --time=120:00:00           # Max runtime (adjust as needed)
+#SBATCH --time=100:00:00           # Max runtime (adjust as needed)
 #SBATCH --mail-user=khurram.khalil@missouri.edu # Your email
 #SBATCH --mail-type=ALL      # Notify on failure or completion
 
