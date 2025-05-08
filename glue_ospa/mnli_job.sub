@@ -65,9 +65,9 @@ log_message "==================================================="
 # Format: size_name;d_model;nhead;nlayers;dim_feedforward;epochs;batch_size;max_seq_len_lm;max_seq_len_glue;lr_lm;lr_glue
 # Adjust epochs, batch size, LR per size/task as needed
 CONFIGS=(
-    "small;256;4;4;1024;15;64;128;64;5e-4;3e-5"  # Smaller batch/seq for small model maybe? Adjusted epochs/LR
-    "medium;512;8;6;2048;20;32;128;128;5e-4;2e-5" # Used 512/8/6 in previous results, increased epochs
-    "large;768;12;12;3072;25;32;128;128;3e-4;1e-5" # Large model needs more epochs, maybe smaller LR
+    "small;256;4;4;1024;20;64;128;64;5e-4;3e-5"  # Smaller batch/seq for small model maybe? Adjusted epochs/LR
+    "medium;512;8;6;2048;25;32;128;128;5e-4;2e-5" # Used 512/8/6 in previous results, increased epochs
+    "large;768;12;12;3072;30;32;128;128;3e-4;1e-5" # Large model needs more epochs, maybe smaller LR
 )
 
 # Define tasks to run
