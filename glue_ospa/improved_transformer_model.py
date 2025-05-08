@@ -216,22 +216,29 @@ class TransformerModel(nn.Module):
         encoder_module = None
         if self.transformer_type == "ospa":
              if self.transformer and hasattr(self.transformer, 'encoder'):
-                 encoder_module = self.transformer.encoder
+                encoder_module = self.transformer.encoder
+                transformer_output = encoder_module(
+                    src=src_pos,                      # [SeqLen, BatchSize, Dim]
+                    mask=causal_src_mask,             # [SeqLen, SeqLen] (for LM) or None
+                    src_key_padding_mask=src_key_padding_mask,  # [BatchSize, SeqLen] (True for PAD)
+                    batch_idx_for_debug=batch_idx_for_debug # Pass it down
+                )
+
         elif self.transformer_type == "vanilla":
-             if hasattr(self, 'transformer_encoder'):
-                 encoder_module = self.transformer_encoder
-             elif self.transformer and hasattr(self.transformer, 'encoder'):
-                 encoder_module = self.transformer.encoder
+            if hasattr(self, 'transformer_encoder'):
+                encoder_module = self.transformer_encoder
+            elif self.transformer and hasattr(self.transformer, 'encoder'):
+                encoder_module = self.transformer.encoder
+            transformer_output = encoder_module(
+                src=src_pos,                      # [SeqLen, BatchSize, Dim]
+                mask=causal_src_mask,             # [SeqLen, SeqLen] (for LM) or None
+                src_key_padding_mask=src_key_padding_mask,  # [BatchSize, SeqLen] (True for PAD)
+            )
 
         if encoder_module is None:
-             raise RuntimeError(f"Could not find valid encoder module for transformer_type '{self.transformer_type}'")
+            raise RuntimeError(f"Could not find valid encoder module for transformer_type '{self.transformer_type}'")
 
-        transformer_output = encoder_module(
-            src=src_pos,                      # [SeqLen, BatchSize, Dim]
-            mask=causal_src_mask,             # [SeqLen, SeqLen] (for LM) or None
-            src_key_padding_mask=src_key_padding_mask,  # [BatchSize, SeqLen] (True for PAD)
-            batch_idx_for_debug=batch_idx_for_debug # Pass it down
-        )
+
         # Output shape: [seq_len, batch_size, d_model]
         logger.debug(f"Batch {kwargs.get('batch_idx_for_debug', -1)} - transformer_output: min={transformer_output.min().item():.2e}, max={transformer_output.max().item():.2e}, mean={transformer_output.mean().item():.2e}, has_nan={torch.isnan(transformer_output).any()}")
 

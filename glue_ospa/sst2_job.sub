@@ -72,7 +72,7 @@ CONFIGS=(
 
 # Define tasks to run
 TASKS=(
-    "lm"
+    # "lm"
     "glue"
 )
 
