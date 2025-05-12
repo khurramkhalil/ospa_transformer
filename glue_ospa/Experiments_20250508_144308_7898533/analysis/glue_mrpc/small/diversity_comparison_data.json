@@ -1,0 +1,22 @@
+[
+  {
+    "name": "best",
+    "diversity": -0.0007486502329508463,
+    "type": "vanilla"
+  },
+  {
+    "name": "best",
+    "diversity": -0.0005000750223795573,
+    "type": "ospa"
+  },
+  {
+    "name": "best",
+    "diversity": -0.00038443406422932944,
+    "type": "ospa"
+  },
+  {
+    "name": "best",
+    "diversity": -0.00038433074951171875,
+    "type": "ospa"
+  }
+]

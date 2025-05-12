@@ -1,0 +1,126 @@
+[2025-05-08_14:43:08] ===================================================
+[2025-05-08_14:43:08]         STARTING OSPA TRAINING & ANALYSIS PIPELINE     
+[2025-05-08_14:43:08] ===================================================
+[2025-05-08_14:43:08] Job ID: 7898533
+[2025-05-08_14:43:08] Host: g009.mgmt.hellbender
+[2025-05-08_14:43:08] Output Directory: Experiments_20250508_144308_7898533
+[2025-05-08_14:43:08] Started at: Thu May  8 14:43:08 CDT 2025
+[2025-05-08_14:43:08] Checking for Python scripts...
+[2025-05-08_14:43:08] ✓ Found required Python scripts.
+[2025-05-08_14:43:08] ===================================================
+[2025-05-08_14:43:08] ========== PROCESSING CONFIGURATION: small ==========
+[2025-05-08_14:43:08] ------ Starting GLUE Task: mrpc (Size: small) ------
+[2025-05-08_14:43:08] --- Starting Training: small_vanilla_init_glue_mrpc ---
+[2025-05-08_14:43:08]     Config: Size=small, Task=glue/mrpc, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_14:43:08]     Output to: Experiments_20250508_144308_7898533/glue/small/small_vanilla_init_glue_mrpc
+[2025-05-08_14:43:08] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 64         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/small/small_vanilla_init_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:44:21] ✓ Training small_vanilla_init_glue_mrpc completed. Model saved.
+[2025-05-08_14:44:21] --- Starting Training: small_ospa_init_glue_mrpc ---
+[2025-05-08_14:44:21]     Config: Size=small, Task=glue/mrpc, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_14:44:21]     Output to: Experiments_20250508_144308_7898533/glue/small/small_ospa_init_glue_mrpc
+[2025-05-08_14:44:21] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/small/small_ospa_init_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:45:55] ✓ Training small_ospa_init_glue_mrpc completed. Model saved.
+[2025-05-08_14:45:55] --- Starting Training: small_ospa_reg0.001_glue_mrpc ---
+[2025-05-08_14:45:55]     Config: Size=small, Task=glue/mrpc, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-08_14:45:55]     Output to: Experiments_20250508_144308_7898533/glue/small/small_ospa_reg0.001_glue_mrpc
+[2025-05-08_14:45:55] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/small/small_ospa_reg0.001_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:47:47] ✓ Training small_ospa_reg0.001_glue_mrpc completed. Model saved.
+[2025-05-08_14:47:47] --- Starting Training: small_ospa_strict_glue_mrpc ---
+[2025-05-08_14:47:47]     Config: Size=small, Task=glue/mrpc, Type=ospa, OrthMode=strict, Lambda=0.0
+[2025-05-08_14:47:47]     Output to: Experiments_20250508_144308_7898533/glue/small/small_ospa_strict_glue_mrpc
+[2025-05-08_14:47:47] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode strict         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/small/small_ospa_strict_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:55:38] ✓ Training small_ospa_strict_glue_mrpc completed. Model saved.
+[2025-05-08_14:55:38] --- Starting Analysis for Config: Size=small, Task=glue_mrpc ---
+[2025-05-08_14:55:38]     Analysis Output to: Experiments_20250508_144308_7898533/analysis/glue_mrpc/small
+[2025-05-08_14:55:38]     Found model for analysis: Experiments_20250508_144308_7898533/glue/small/small_vanilla_init_glue_mrpc/best_model.pt
+[2025-05-08_14:55:38]     Found model for analysis: Experiments_20250508_144308_7898533/glue/small/small_ospa_init_glue_mrpc/best_model.pt
+[2025-05-08_14:55:38]     Found model for analysis: Experiments_20250508_144308_7898533/glue/small/small_ospa_reg0.001_glue_mrpc/best_model.pt
+[2025-05-08_14:55:38]     Found model for analysis: Experiments_20250508_144308_7898533/glue/small/small_ospa_strict_glue_mrpc/best_model.pt
+[2025-05-08_14:55:38] Executing Comparison Command for glue_mrpc_small:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144308_7898533/glue/small/small_vanilla_init_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/small/small_ospa_init_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/small/small_ospa_reg0.001_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/small/small_ospa_strict_glue_mrpc/best_model.pt"         --output_dir "Experiments_20250508_144308_7898533/analysis/glue_mrpc/small"         --d_model 256         --nhead 4         --nlayers 4
+[2025-05-08_14:55:46] ✓ Comparison analysis for glue_mrpc_small completed successfully.
+[2025-05-08_14:55:46] ------ Finished GLUE Task: mrpc (Size: small) ------
+[2025-05-08_14:55:46] ========== FINISHED CONFIGURATION: small ==========
+[2025-05-08_14:55:46] ========== PROCESSING CONFIGURATION: medium ==========
+[2025-05-08_14:55:46] ------ Starting GLUE Task: mrpc (Size: medium) ------
+[2025-05-08_14:55:46] --- Starting Training: medium_vanilla_init_glue_mrpc ---
+[2025-05-08_14:55:46]     Config: Size=medium, Task=glue/mrpc, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_14:55:46]     Output to: Experiments_20250508_144308_7898533/glue/medium/medium_vanilla_init_glue_mrpc
+[2025-05-08_14:55:46] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/medium/medium_vanilla_init_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_15:00:29] ✓ Training medium_vanilla_init_glue_mrpc completed. Model saved.
+[2025-05-08_15:00:29] --- Starting Training: medium_ospa_init_glue_mrpc ---
+[2025-05-08_15:00:29]     Config: Size=medium, Task=glue/mrpc, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_15:00:29]     Output to: Experiments_20250508_144308_7898533/glue/medium/medium_ospa_init_glue_mrpc
+[2025-05-08_15:00:29] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/medium/medium_ospa_init_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_15:06:50] ✓ Training medium_ospa_init_glue_mrpc completed. Model saved.
+[2025-05-08_15:06:50] --- Starting Training: medium_ospa_reg0.001_glue_mrpc ---
+[2025-05-08_15:06:50]     Config: Size=medium, Task=glue/mrpc, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-08_15:06:50]     Output to: Experiments_20250508_144308_7898533/glue/medium/medium_ospa_reg0.001_glue_mrpc
+[2025-05-08_15:06:50] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/medium/medium_ospa_reg0.001_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_15:14:21] ✓ Training medium_ospa_reg0.001_glue_mrpc completed. Model saved.
+[2025-05-08_15:14:21] --- Starting Training: medium_ospa_strict_glue_mrpc ---
+[2025-05-08_15:14:21]     Config: Size=medium, Task=glue/mrpc, Type=ospa, OrthMode=strict, Lambda=0.0
+[2025-05-08_15:14:21]     Output to: Experiments_20250508_144308_7898533/glue/medium/medium_ospa_strict_glue_mrpc
+[2025-05-08_15:14:21] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode strict         --orth_penalty_weight 0.0         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/medium/medium_ospa_strict_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_18:14:06] ✓ Training medium_ospa_strict_glue_mrpc completed. Model saved.
+[2025-05-08_18:14:06] --- Starting Analysis for Config: Size=medium, Task=glue_mrpc ---
+[2025-05-08_18:14:06]     Analysis Output to: Experiments_20250508_144308_7898533/analysis/glue_mrpc/medium
+[2025-05-08_18:14:06]     Found model for analysis: Experiments_20250508_144308_7898533/glue/medium/medium_vanilla_init_glue_mrpc/best_model.pt
+[2025-05-08_18:14:06]     Found model for analysis: Experiments_20250508_144308_7898533/glue/medium/medium_ospa_init_glue_mrpc/best_model.pt
+[2025-05-08_18:14:06]     Found model for analysis: Experiments_20250508_144308_7898533/glue/medium/medium_ospa_reg0.001_glue_mrpc/best_model.pt
+[2025-05-08_18:14:06]     Found model for analysis: Experiments_20250508_144308_7898533/glue/medium/medium_ospa_strict_glue_mrpc/best_model.pt
+[2025-05-08_18:14:06] Executing Comparison Command for glue_mrpc_medium:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144308_7898533/glue/medium/medium_vanilla_init_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/medium/medium_ospa_init_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/medium/medium_ospa_reg0.001_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/medium/medium_ospa_strict_glue_mrpc/best_model.pt"         --output_dir "Experiments_20250508_144308_7898533/analysis/glue_mrpc/medium"         --d_model 512         --nhead 8         --nlayers 6
+[2025-05-08_18:14:14] ✓ Comparison analysis for glue_mrpc_medium completed successfully.
+[2025-05-08_18:14:14] ------ Finished GLUE Task: mrpc (Size: medium) ------
+[2025-05-08_18:14:14] ========== FINISHED CONFIGURATION: medium ==========
+[2025-05-08_18:14:14] ========== PROCESSING CONFIGURATION: large ==========
+[2025-05-08_18:14:14] ------ Starting GLUE Task: mrpc (Size: large) ------
+[2025-05-08_18:14:14] --- Starting Training: large_vanilla_init_glue_mrpc ---
+[2025-05-08_18:14:14]     Config: Size=large, Task=glue/mrpc, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_18:14:14]     Output to: Experiments_20250508_144308_7898533/glue/large/large_vanilla_init_glue_mrpc
+[2025-05-08_18:14:14] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/large/large_vanilla_init_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_18:28:05] ✓ Training large_vanilla_init_glue_mrpc completed. Model saved.
+[2025-05-08_18:28:05] --- Starting Training: large_ospa_init_glue_mrpc ---
+[2025-05-08_18:28:05]     Config: Size=large, Task=glue/mrpc, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_18:28:05]     Output to: Experiments_20250508_144308_7898533/glue/large/large_ospa_init_glue_mrpc
+[2025-05-08_18:28:05] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/large/large_ospa_init_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_18:47:01] ✓ Training large_ospa_init_glue_mrpc completed. Model saved.
+[2025-05-08_18:47:01] --- Starting Training: large_ospa_reg0.001_glue_mrpc ---
+[2025-05-08_18:47:01]     Config: Size=large, Task=glue/mrpc, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-08_18:47:01]     Output to: Experiments_20250508_144308_7898533/glue/large/large_ospa_reg0.001_glue_mrpc
+[2025-05-08_18:47:01] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/large/large_ospa_reg0.001_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-08_19:08:53] ✓ Training large_ospa_reg0.001_glue_mrpc completed. Model saved.
+[2025-05-08_19:08:53] --- Starting Training: large_ospa_strict_glue_mrpc ---
+[2025-05-08_19:08:53]     Config: Size=large, Task=glue/mrpc, Type=ospa, OrthMode=strict, Lambda=0.0
+[2025-05-08_19:08:53]     Output to: Experiments_20250508_144308_7898533/glue/large/large_ospa_strict_glue_mrpc
+[2025-05-08_19:08:53] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task mrpc         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode strict         --orth_penalty_weight 0.0         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144308_7898533/glue/large/large_ospa_strict_glue_mrpc"         --save "best_model.pt"         --device cuda
+[2025-05-09_02:10:11] ✓ Training large_ospa_strict_glue_mrpc completed. Model saved.
+[2025-05-09_02:10:11] --- Starting Analysis for Config: Size=large, Task=glue_mrpc ---
+[2025-05-09_02:10:12]     Analysis Output to: Experiments_20250508_144308_7898533/analysis/glue_mrpc/large
+[2025-05-09_02:10:12]     Found model for analysis: Experiments_20250508_144308_7898533/glue/large/large_vanilla_init_glue_mrpc/best_model.pt
+[2025-05-09_02:10:12]     Found model for analysis: Experiments_20250508_144308_7898533/glue/large/large_ospa_init_glue_mrpc/best_model.pt
+[2025-05-09_02:10:12]     Found model for analysis: Experiments_20250508_144308_7898533/glue/large/large_ospa_reg0.001_glue_mrpc/best_model.pt
+[2025-05-09_02:10:12]     Found model for analysis: Experiments_20250508_144308_7898533/glue/large/large_ospa_strict_glue_mrpc/best_model.pt
+[2025-05-09_02:10:12] Executing Comparison Command for glue_mrpc_large:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144308_7898533/glue/large/large_vanilla_init_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/large/large_ospa_init_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/large/large_ospa_reg0.001_glue_mrpc/best_model.pt" "Experiments_20250508_144308_7898533/glue/large/large_ospa_strict_glue_mrpc/best_model.pt"         --output_dir "Experiments_20250508_144308_7898533/analysis/glue_mrpc/large"         --d_model 768         --nhead 12         --nlayers 12
+[2025-05-09_02:10:21] ✓ Comparison analysis for glue_mrpc_large completed successfully.
+[2025-05-09_02:10:21] ------ Finished GLUE Task: mrpc (Size: large) ------
+[2025-05-09_02:10:21] ========== FINISHED CONFIGURATION: large ==========
+[2025-05-09_02:10:21] ===================================================
+[2025-05-09_02:10:21]            PIPELINE COMPLETED                   
+[2025-05-09_02:10:21] Total Duration: 11h:27m:13s
+[2025-05-09_02:10:21] Results, Models, Logs saved in: Experiments_20250508_144308_7898533
+[2025-05-09_02:10:21] Completed at: Fri May  9 02:10:21 CDT 2025
