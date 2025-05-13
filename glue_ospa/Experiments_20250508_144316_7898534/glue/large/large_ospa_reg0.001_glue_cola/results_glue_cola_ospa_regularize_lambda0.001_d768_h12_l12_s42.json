@@ -1,0 +1,250 @@
+{
+  "args": {
+    "task": "glue",
+    "glue_task": "cola",
+    "lm_dataset_name": "wikitext",
+    "lm_dataset_config": "wikitext-103-raw-v1",
+    "transformer_type": "ospa",
+    "tokenizer_name": "bert-base-uncased",
+    "d_model": 768,
+    "nhead": 12,
+    "nlayers": 12,
+    "dim_feedforward": 3072,
+    "dropout": 0.1,
+    "orth_mode": "regularize",
+    "orth_penalty_weight": 0.001,
+    "max_seq_len": 128,
+    "epochs": 30,
+    "batch_size": 32,
+    "gradient_accumulation_steps": 4,
+    "lr": 1e-05,
+    "weight_decay": 0.01,
+    "clip": 1.0,
+    "scheduler_update_every_step": true,
+    "device": "cuda",
+    "num_workers": 0,
+    "seed": 42,
+    "log_interval": 100,
+    "output_dir": "Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola",
+    "save": "best_model.pt",
+    "loglevel": "ERROR",
+    "is_regression": false,
+    "num_labels": 2
+  },
+  "epochs": {
+    "1": {
+      "train_loss": 37.418901358077775,
+      "validation": {
+        "loss": 0.6168228595545797,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "2": {
+      "train_loss": 36.91392825966451,
+      "validation": {
+        "loss": 0.6168318183133097,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "3": {
+      "train_loss": 35.957294236368206,
+      "validation": {
+        "loss": 0.6300964671553988,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "4": {
+      "train_loss": 34.615325429546296,
+      "validation": {
+        "loss": 0.6182178800756281,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "5": {
+      "train_loss": 32.87724004574676,
+      "validation": {
+        "loss": 0.6168780660990513,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "6": {
+      "train_loss": 30.829784841679814,
+      "validation": {
+        "loss": 0.6230715838345614,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "7": {
+      "train_loss": 28.829232941812545,
+      "validation": {
+        "loss": 0.6171676841649142,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "8": {
+      "train_loss": 26.925051105556204,
+      "validation": {
+        "loss": 0.6175084592718066,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "9": {
+      "train_loss": 25.270663659964036,
+      "validation": {
+        "loss": 0.6218292649948236,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "10": {
+      "train_loss": 23.94073353240739,
+      "validation": {
+        "loss": 0.6235088543458418,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "11": {
+      "train_loss": 22.684043798873674,
+      "validation": {
+        "loss": 0.6167279653476946,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "12": {
+      "train_loss": 21.57123147907542,
+      "validation": {
+        "loss": 0.6234140504490245,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "13": {
+      "train_loss": 20.627046008608236,
+      "validation": {
+        "loss": 0.6172628800074259,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "14": {
+      "train_loss": 19.862238641995102,
+      "validation": {
+        "loss": 0.6175906116312201,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "15": {
+      "train_loss": 19.133118985304193,
+      "validation": {
+        "loss": 0.6214504314191414,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "16": {
+      "train_loss": 18.47955833264251,
+      "validation": {
+        "loss": 0.6171740528308984,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "17": {
+      "train_loss": 17.893529607288873,
+      "validation": {
+        "loss": 0.6169285403959679,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "18": {
+      "train_loss": 17.408154893277295,
+      "validation": {
+        "loss": 0.6182878026456544,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "19": {
+      "train_loss": 16.989972385007945,
+      "validation": {
+        "loss": 0.6202409122929429,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "20": {
+      "train_loss": 16.614275092509256,
+      "validation": {
+        "loss": 0.6170208923744432,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "21": {
+      "train_loss": 16.27901549125785,
+      "validation": {
+        "loss": 0.6166357307723074,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "22": {
+      "train_loss": 15.987372750666603,
+      "validation": {
+        "loss": 0.6175053228031505,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "23": {
+      "train_loss": 15.726173101966062,
+      "validation": {
+        "loss": 0.6188541434027932,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "24": {
+      "train_loss": 15.514753772251641,
+      "validation": {
+        "loss": 0.6196687510519316,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "25": {
+      "train_loss": 15.333764773696217,
+      "validation": {
+        "loss": 0.6171694136027134,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "26": {
+      "train_loss": 15.173431407159834,
+      "validation": {
+        "loss": 0.6174643843462972,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "27": {
+      "train_loss": 15.046150474406,
+      "validation": {
+        "loss": 0.6182917618390286,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "28": {
+      "train_loss": 14.951328594293168,
+      "validation": {
+        "loss": 0.6176853369582783,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "29": {
+      "train_loss": 14.888281028662155,
+      "validation": {
+        "loss": 0.6175357274936907,
+        "glue_matthews_correlation": 0.0
+      }
+    },
+    "30": {
+      "train_loss": 14.85693057259517,
+      "validation": {
+        "loss": 0.6177263494693872,
+        "glue_matthews_correlation": 0.0
+      }
+    }
+  },
+  "final_test_results": {
+    "loss": 0.6168228595545797,
+    "glue_matthews_correlation": 0.0
+  }
+}

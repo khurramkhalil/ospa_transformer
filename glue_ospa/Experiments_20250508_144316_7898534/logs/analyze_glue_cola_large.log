@@ -1,0 +1,73 @@
+--- Analysis Run for glue_cola_large --- Thu May  8 17:42:58 CDT 2025
+2025-05-08 17:43:00,565 - INFO - Comparing 3 models.
+2025-05-08 17:43:00,565 - INFO - --- Analyzing Model: Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola/best_model.pt ---
+2025-05-08 17:43:00,745 - INFO - Successfully loaded state dict from Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola/best_model.pt
+2025-05-08 17:43:00,746 - INFO - Inferred model type: vanilla
+2025-05-08 17:43:00,746 - INFO - Expecting 12 layers based on args.
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 4
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 5
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 6
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 7
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 8
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 9
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 10
+2025-05-08 17:43:00,746 - INFO - Successfully extracted all projection weights for layer 11
+2025-05-08 17:43:00,787 - INFO - Generated 144 head vectors across 12 layers.
+2025-05-08 17:43:00,899 - INFO - Saved analysis metrics to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/analysis_metrics.json
+2025-05-08 17:43:01,481 - INFO - Saved head similarity heatmap to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/head_similarity.png
+2025-05-08 17:43:01,481 - INFO - --- Analysis complete for: Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola/best_model.pt ---
+2025-05-08 17:43:01,484 - INFO - --- Analyzing Model: Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola/best_model.pt ---
+2025-05-08 17:43:01,651 - INFO - Successfully loaded state dict from Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola/best_model.pt
+2025-05-08 17:43:01,652 - INFO - Inferred model type: ospa
+2025-05-08 17:43:01,652 - INFO - Expecting 12 layers based on args.
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 4
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 5
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 6
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 7
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 8
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 9
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 10
+2025-05-08 17:43:01,652 - INFO - Successfully extracted all projection weights for layer 11
+2025-05-08 17:43:01,672 - INFO - Generated 144 head vectors across 12 layers.
+2025-05-08 17:43:01,778 - INFO - Checking orthogonality for OSPA model...
+2025-05-08 17:43:01,852 - INFO - Overall Avg Orthogonality Error (Squared Norm): 7.6819e+02
+2025-05-08 17:43:01,857 - INFO - Saved analysis metrics to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/analysis_metrics.json
+2025-05-08 17:43:02,412 - INFO - Saved head similarity heatmap to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/head_similarity.png
+2025-05-08 17:43:03,082 - INFO - Saved orthogonality error plot to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/orthogonality_error.png
+2025-05-08 17:43:03,082 - INFO - --- Analysis complete for: Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola/best_model.pt ---
+2025-05-08 17:43:03,083 - INFO - --- Analyzing Model: Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola/best_model.pt ---
+2025-05-08 17:43:03,258 - INFO - Successfully loaded state dict from Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola/best_model.pt
+2025-05-08 17:43:03,258 - INFO - Inferred model type: ospa
+2025-05-08 17:43:03,258 - INFO - Expecting 12 layers based on args.
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 4
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 5
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 6
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 7
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 8
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 9
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 10
+2025-05-08 17:43:03,258 - INFO - Successfully extracted all projection weights for layer 11
+2025-05-08 17:43:03,287 - INFO - Generated 144 head vectors across 12 layers.
+2025-05-08 17:43:03,393 - INFO - Checking orthogonality for OSPA model...
+2025-05-08 17:43:03,461 - INFO - Overall Avg Orthogonality Error (Squared Norm): 7.6302e+02
+2025-05-08 17:43:03,464 - INFO - Saved analysis metrics to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/analysis_metrics.json
+2025-05-08 17:43:04,021 - INFO - Saved head similarity heatmap to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/head_similarity.png
+2025-05-08 17:43:04,672 - INFO - Saved orthogonality error plot to Experiments_20250508_144316_7898534/analysis/glue_cola/large/best_model/orthogonality_error.png
+2025-05-08 17:43:04,673 - INFO - --- Analysis complete for: Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola/best_model.pt ---
+2025-05-08 17:43:04,673 - INFO - --- Creating Comparison Visualizations for 3 Models ---
+2025-05-08 17:43:04,992 - INFO - Saved diversity comparison plot to Experiments_20250508_144316_7898534/analysis/glue_cola/large/model_diversity_comparison.png
+2025-05-08 17:43:05,011 - INFO - Saved comparison data to Experiments_20250508_144316_7898534/analysis/glue_cola/large/diversity_comparison_data.json
+2025-05-08 17:43:05,011 - INFO - --- Model Comparison Complete ---
+2025-05-08 17:43:05,011 - INFO - --- Analysis Script Finished ---

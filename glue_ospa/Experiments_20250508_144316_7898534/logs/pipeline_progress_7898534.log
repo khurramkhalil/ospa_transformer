@@ -1,0 +1,105 @@
+[2025-05-08_14:43:16] ===================================================
+[2025-05-08_14:43:16]         STARTING OSPA TRAINING & ANALYSIS PIPELINE     
+[2025-05-08_14:43:16] ===================================================
+[2025-05-08_14:43:16] Job ID: 7898534
+[2025-05-08_14:43:16] Host: g009.mgmt.hellbender
+[2025-05-08_14:43:16] Output Directory: Experiments_20250508_144316_7898534
+[2025-05-08_14:43:16] Started at: Thu May  8 14:43:16 CDT 2025
+[2025-05-08_14:43:16] Checking for Python scripts...
+[2025-05-08_14:43:16] ✓ Found required Python scripts.
+[2025-05-08_14:43:16] ===================================================
+[2025-05-08_14:43:16] ========== PROCESSING CONFIGURATION: small ==========
+[2025-05-08_14:43:16] ------ Starting GLUE Task: cola (Size: small) ------
+[2025-05-08_14:43:16] --- Starting Training: small_vanilla_init_glue_cola ---
+[2025-05-08_14:43:16]     Config: Size=small, Task=glue/cola, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_14:43:16]     Output to: Experiments_20250508_144316_7898534/glue/small/small_vanilla_init_glue_cola
+[2025-05-08_14:43:16] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 64         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/small/small_vanilla_init_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:45:48] ✓ Training small_vanilla_init_glue_cola completed. Model saved.
+[2025-05-08_14:45:49] --- Starting Training: small_ospa_init_glue_cola ---
+[2025-05-08_14:45:49]     Config: Size=small, Task=glue/cola, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_14:45:49]     Output to: Experiments_20250508_144316_7898534/glue/small/small_ospa_init_glue_cola
+[2025-05-08_14:45:49] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/small/small_ospa_init_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:49:11] ✓ Training small_ospa_init_glue_cola completed. Model saved.
+[2025-05-08_14:49:11] --- Starting Training: small_ospa_reg0.001_glue_cola ---
+[2025-05-08_14:49:11]     Config: Size=small, Task=glue/cola, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-08_14:49:11]     Output to: Experiments_20250508_144316_7898534/glue/small/small_ospa_reg0.001_glue_cola
+[2025-05-08_14:49:11] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/small/small_ospa_reg0.001_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_14:53:13] ✓ Training small_ospa_reg0.001_glue_cola completed. Model saved.
+[2025-05-08_14:53:13] --- Starting Analysis for Config: Size=small, Task=glue_cola ---
+[2025-05-08_14:53:13]     Analysis Output to: Experiments_20250508_144316_7898534/analysis/glue_cola/small
+[2025-05-08_14:53:13]     Found model for analysis: Experiments_20250508_144316_7898534/glue/small/small_vanilla_init_glue_cola/best_model.pt
+[2025-05-08_14:53:13]     Found model for analysis: Experiments_20250508_144316_7898534/glue/small/small_ospa_init_glue_cola/best_model.pt
+[2025-05-08_14:53:13]     Found model for analysis: Experiments_20250508_144316_7898534/glue/small/small_ospa_reg0.001_glue_cola/best_model.pt
+[2025-05-08_14:53:13] Executing Comparison Command for glue_cola_small:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144316_7898534/glue/small/small_vanilla_init_glue_cola/best_model.pt" "Experiments_20250508_144316_7898534/glue/small/small_ospa_init_glue_cola/best_model.pt" "Experiments_20250508_144316_7898534/glue/small/small_ospa_reg0.001_glue_cola/best_model.pt"         --output_dir "Experiments_20250508_144316_7898534/analysis/glue_cola/small"         --d_model 256         --nhead 4         --nlayers 4
+[2025-05-08_14:53:20] ✓ Comparison analysis for glue_cola_small completed successfully.
+[2025-05-08_14:53:20] ------ Finished GLUE Task: cola (Size: small) ------
+[2025-05-08_14:53:20] ========== FINISHED CONFIGURATION: small ==========
+[2025-05-08_14:53:20] ========== PROCESSING CONFIGURATION: medium ==========
+[2025-05-08_14:53:20] ------ Starting GLUE Task: cola (Size: medium) ------
+[2025-05-08_14:53:20] --- Starting Training: medium_vanilla_init_glue_cola ---
+[2025-05-08_14:53:20]     Config: Size=medium, Task=glue/cola, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_14:53:20]     Output to: Experiments_20250508_144316_7898534/glue/medium/medium_vanilla_init_glue_cola
+[2025-05-08_14:53:20] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 128         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/medium/medium_vanilla_init_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_15:04:03] ✓ Training medium_vanilla_init_glue_cola completed. Model saved.
+[2025-05-08_15:04:03] --- Starting Training: medium_ospa_init_glue_cola ---
+[2025-05-08_15:04:03]     Config: Size=medium, Task=glue/cola, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_15:04:03]     Output to: Experiments_20250508_144316_7898534/glue/medium/medium_ospa_init_glue_cola
+[2025-05-08_15:04:03] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/medium/medium_ospa_init_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_15:18:39] ✓ Training medium_ospa_init_glue_cola completed. Model saved.
+[2025-05-08_15:18:39] --- Starting Training: medium_ospa_reg0.001_glue_cola ---
+[2025-05-08_15:18:39]     Config: Size=medium, Task=glue/cola, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-08_15:18:39]     Output to: Experiments_20250508_144316_7898534/glue/medium/medium_ospa_reg0.001_glue_cola
+[2025-05-08_15:18:39] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 2e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/medium/medium_ospa_reg0.001_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_15:35:46] ✓ Training medium_ospa_reg0.001_glue_cola completed. Model saved.
+[2025-05-08_15:35:46] --- Starting Analysis for Config: Size=medium, Task=glue_cola ---
+[2025-05-08_15:35:46]     Analysis Output to: Experiments_20250508_144316_7898534/analysis/glue_cola/medium
+[2025-05-08_15:35:46]     Found model for analysis: Experiments_20250508_144316_7898534/glue/medium/medium_vanilla_init_glue_cola/best_model.pt
+[2025-05-08_15:35:46]     Found model for analysis: Experiments_20250508_144316_7898534/glue/medium/medium_ospa_init_glue_cola/best_model.pt
+[2025-05-08_15:35:46]     Found model for analysis: Experiments_20250508_144316_7898534/glue/medium/medium_ospa_reg0.001_glue_cola/best_model.pt
+[2025-05-08_15:35:47] Executing Comparison Command for glue_cola_medium:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144316_7898534/glue/medium/medium_vanilla_init_glue_cola/best_model.pt" "Experiments_20250508_144316_7898534/glue/medium/medium_ospa_init_glue_cola/best_model.pt" "Experiments_20250508_144316_7898534/glue/medium/medium_ospa_reg0.001_glue_cola/best_model.pt"         --output_dir "Experiments_20250508_144316_7898534/analysis/glue_cola/medium"         --d_model 512         --nhead 8         --nlayers 6
+[2025-05-08_15:35:53] ✓ Comparison analysis for glue_cola_medium completed successfully.
+[2025-05-08_15:35:53] ------ Finished GLUE Task: cola (Size: medium) ------
+[2025-05-08_15:35:53] ========== FINISHED CONFIGURATION: medium ==========
+[2025-05-08_15:35:53] ========== PROCESSING CONFIGURATION: large ==========
+[2025-05-08_15:35:53] ------ Starting GLUE Task: cola (Size: large) ------
+[2025-05-08_15:35:53] --- Starting Training: large_vanilla_init_glue_cola ---
+[2025-05-08_15:35:53]     Config: Size=large, Task=glue/cola, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_15:35:53]     Output to: Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola
+[2025-05-08_15:35:53] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 128         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_16:08:13] ✓ Training large_vanilla_init_glue_cola completed. Model saved.
+[2025-05-08_16:08:13] --- Starting Training: large_ospa_init_glue_cola ---
+[2025-05-08_16:08:13]     Config: Size=large, Task=glue/cola, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_16:08:13]     Output to: Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola
+[2025-05-08_16:08:13] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_16:52:21] ✓ Training large_ospa_init_glue_cola completed. Model saved.
+[2025-05-08_16:52:21] --- Starting Training: large_ospa_reg0.001_glue_cola ---
+[2025-05-08_16:52:21]     Config: Size=large, Task=glue/cola, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-08_16:52:21]     Output to: Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola
+[2025-05-08_16:52:21] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task cola         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 768         --nhead 12         --nlayers 12         --dim_feedforward 3072         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 30         --batch_size 32         --gradient_accumulation_steps 4         --lr 1e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola"         --save "best_model.pt"         --device cuda
+[2025-05-08_17:42:58] ✓ Training large_ospa_reg0.001_glue_cola completed. Model saved.
+[2025-05-08_17:42:58] --- Starting Analysis for Config: Size=large, Task=glue_cola ---
+[2025-05-08_17:42:58]     Analysis Output to: Experiments_20250508_144316_7898534/analysis/glue_cola/large
+[2025-05-08_17:42:58]     Found model for analysis: Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola/best_model.pt
+[2025-05-08_17:42:58]     Found model for analysis: Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola/best_model.pt
+[2025-05-08_17:42:58]     Found model for analysis: Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola/best_model.pt
+[2025-05-08_17:42:58] Executing Comparison Command for glue_cola_large:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144316_7898534/glue/large/large_vanilla_init_glue_cola/best_model.pt" "Experiments_20250508_144316_7898534/glue/large/large_ospa_init_glue_cola/best_model.pt" "Experiments_20250508_144316_7898534/glue/large/large_ospa_reg0.001_glue_cola/best_model.pt"         --output_dir "Experiments_20250508_144316_7898534/analysis/glue_cola/large"         --d_model 768         --nhead 12         --nlayers 12
+[2025-05-08_17:43:05] ✓ Comparison analysis for glue_cola_large completed successfully.
+[2025-05-08_17:43:05] ------ Finished GLUE Task: cola (Size: large) ------
+[2025-05-08_17:43:05] ========== FINISHED CONFIGURATION: large ==========
+[2025-05-08_17:43:05] ===================================================
+[2025-05-08_17:43:05]            PIPELINE COMPLETED                   
+[2025-05-08_17:43:05] Total Duration: 2h:59m:49s
+[2025-05-08_17:43:05] Results, Models, Logs saved in: Experiments_20250508_144316_7898534
+[2025-05-08_17:43:05] Completed at: Thu May  8 17:43:05 CDT 2025
