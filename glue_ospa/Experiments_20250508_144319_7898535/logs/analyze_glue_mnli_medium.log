@@ -1,0 +1,55 @@
+--- Analysis Run for glue_mnli_medium --- Sat May 10 04:58:52 CDT 2025
+2025-05-10 04:58:55,400 - INFO - Comparing 3 models.
+2025-05-10 04:58:55,401 - INFO - --- Analyzing Model: Experiments_20250508_144319_7898535/glue/medium/medium_vanilla_init_glue_mnli/best_model.pt ---
+2025-05-10 04:58:55,485 - INFO - Successfully loaded state dict from Experiments_20250508_144319_7898535/glue/medium/medium_vanilla_init_glue_mnli/best_model.pt
+2025-05-10 04:58:55,485 - INFO - Inferred model type: vanilla
+2025-05-10 04:58:55,485 - INFO - Expecting 6 layers based on args.
+2025-05-10 04:58:55,485 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-10 04:58:55,485 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-10 04:58:55,485 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-10 04:58:55,485 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-10 04:58:55,485 - INFO - Successfully extracted all projection weights for layer 4
+2025-05-10 04:58:55,485 - INFO - Successfully extracted all projection weights for layer 5
+2025-05-10 04:58:55,497 - INFO - Generated 48 head vectors across 6 layers.
+2025-05-10 04:58:55,522 - INFO - Saved analysis metrics to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/analysis_metrics.json
+2025-05-10 04:58:56,063 - INFO - Saved head similarity heatmap to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/head_similarity.png
+2025-05-10 04:58:56,064 - INFO - --- Analysis complete for: Experiments_20250508_144319_7898535/glue/medium/medium_vanilla_init_glue_mnli/best_model.pt ---
+2025-05-10 04:58:56,064 - INFO - --- Analyzing Model: Experiments_20250508_144319_7898535/glue/medium/medium_ospa_init_glue_mnli/best_model.pt ---
+2025-05-10 04:58:56,111 - INFO - Successfully loaded state dict from Experiments_20250508_144319_7898535/glue/medium/medium_ospa_init_glue_mnli/best_model.pt
+2025-05-10 04:58:56,111 - INFO - Inferred model type: ospa
+2025-05-10 04:58:56,111 - INFO - Expecting 6 layers based on args.
+2025-05-10 04:58:56,111 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-10 04:58:56,111 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-10 04:58:56,111 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-10 04:58:56,111 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-10 04:58:56,111 - INFO - Successfully extracted all projection weights for layer 4
+2025-05-10 04:58:56,111 - INFO - Successfully extracted all projection weights for layer 5
+2025-05-10 04:58:56,117 - INFO - Generated 48 head vectors across 6 layers.
+2025-05-10 04:58:56,138 - INFO - Checking orthogonality for OSPA model...
+2025-05-10 04:58:56,250 - INFO - Overall Avg Orthogonality Error (Squared Norm): 5.1063e+02
+2025-05-10 04:58:56,254 - INFO - Saved analysis metrics to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/analysis_metrics.json
+2025-05-10 04:58:56,787 - INFO - Saved head similarity heatmap to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/head_similarity.png
+2025-05-10 04:58:57,404 - INFO - Saved orthogonality error plot to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/orthogonality_error.png
+2025-05-10 04:58:57,404 - INFO - --- Analysis complete for: Experiments_20250508_144319_7898535/glue/medium/medium_ospa_init_glue_mnli/best_model.pt ---
+2025-05-10 04:58:57,404 - INFO - --- Analyzing Model: Experiments_20250508_144319_7898535/glue/medium/medium_ospa_reg0.001_glue_mnli/best_model.pt ---
+2025-05-10 04:58:57,463 - INFO - Successfully loaded state dict from Experiments_20250508_144319_7898535/glue/medium/medium_ospa_reg0.001_glue_mnli/best_model.pt
+2025-05-10 04:58:57,463 - INFO - Inferred model type: ospa
+2025-05-10 04:58:57,463 - INFO - Expecting 6 layers based on args.
+2025-05-10 04:58:57,463 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-10 04:58:57,463 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-10 04:58:57,463 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-10 04:58:57,463 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-10 04:58:57,463 - INFO - Successfully extracted all projection weights for layer 4
+2025-05-10 04:58:57,463 - INFO - Successfully extracted all projection weights for layer 5
+2025-05-10 04:58:57,473 - INFO - Generated 48 head vectors across 6 layers.
+2025-05-10 04:58:57,494 - INFO - Checking orthogonality for OSPA model...
+2025-05-10 04:58:57,550 - INFO - Overall Avg Orthogonality Error (Squared Norm): 1.1681e+02
+2025-05-10 04:58:57,555 - INFO - Saved analysis metrics to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/analysis_metrics.json
+2025-05-10 04:58:58,086 - INFO - Saved head similarity heatmap to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/head_similarity.png
+2025-05-10 04:58:58,678 - INFO - Saved orthogonality error plot to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/best_model/orthogonality_error.png
+2025-05-10 04:58:58,678 - INFO - --- Analysis complete for: Experiments_20250508_144319_7898535/glue/medium/medium_ospa_reg0.001_glue_mnli/best_model.pt ---
+2025-05-10 04:58:58,678 - INFO - --- Creating Comparison Visualizations for 3 Models ---
+2025-05-10 04:58:58,990 - INFO - Saved diversity comparison plot to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/model_diversity_comparison.png
+2025-05-10 04:58:58,993 - INFO - Saved comparison data to Experiments_20250508_144319_7898535/analysis/glue_mnli/medium/diversity_comparison_data.json
+2025-05-10 04:58:58,993 - INFO - --- Model Comparison Complete ---
+2025-05-10 04:58:58,993 - INFO - --- Analysis Script Finished ---
