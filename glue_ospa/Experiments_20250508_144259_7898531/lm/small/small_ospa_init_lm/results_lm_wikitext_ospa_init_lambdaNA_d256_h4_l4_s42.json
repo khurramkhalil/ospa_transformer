@@ -1,0 +1,180 @@
+{
+  "args": {
+    "task": "lm",
+    "glue_task": "sst2",
+    "lm_dataset_name": "wikitext",
+    "lm_dataset_config": "wikitext-103-raw-v1",
+    "transformer_type": "ospa",
+    "tokenizer_name": "bert-base-uncased",
+    "d_model": 256,
+    "nhead": 4,
+    "nlayers": 4,
+    "dim_feedforward": 1024,
+    "dropout": 0.1,
+    "orth_mode": "init",
+    "orth_penalty_weight": 0.0,
+    "max_seq_len": 128,
+    "epochs": 20,
+    "batch_size": 64,
+    "gradient_accumulation_steps": 4,
+    "lr": 0.0005,
+    "weight_decay": 0.01,
+    "clip": 1.0,
+    "scheduler_update_every_step": true,
+    "device": "cuda",
+    "num_workers": 0,
+    "seed": 42,
+    "log_interval": 100,
+    "output_dir": "Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm",
+    "save": "best_model.pt",
+    "loglevel": "ERROR",
+    "num_labels": 30522,
+    "is_regression": false
+  },
+  "epochs": {
+    "1": {
+      "train_loss": 5.8813132365722085,
+      "validation": {
+        "loss": 2.0394980748494467,
+        "perplexity": 7.686750057280137
+      }
+    },
+    "2": {
+      "train_loss": 0.6788245304210823,
+      "validation": {
+        "loss": 0.028372992854565383,
+        "perplexity": 1.028779340209366
+      }
+    },
+    "3": {
+      "train_loss": 0.017356039807386932,
+      "validation": {
+        "loss": 0.0006031233274067442,
+        "perplexity": 1.0006033052428513
+      }
+    },
+    "4": {
+      "train_loss": 0.0018133902697678513,
+      "validation": {
+        "loss": 0.00010316204949655609,
+        "perplexity": 1.0001031673708838
+      }
+    },
+    "5": {
+      "train_loss": 0.0008277990147906482,
+      "validation": {
+        "loss": 7.35853235672342e-05,
+        "perplexity": 1.0000735880310336
+      }
+    },
+    "6": {
+      "train_loss": 0.0005456924063188537,
+      "validation": {
+        "loss": 2.285010227372671e-05,
+        "perplexity": 1.0000228503633393
+      }
+    },
+    "7": {
+      "train_loss": 0.00040705023121651794,
+      "validation": {
+        "loss": 1.2766443969288351e-05,
+        "perplexity": 1.0000127665254608
+      }
+    },
+    "8": {
+      "train_loss": 0.00032651623457861305,
+      "validation": {
+        "loss": 5.377071201924839e-07,
+        "perplexity": 1.0000005377072647
+      }
+    },
+    "9": {
+      "train_loss": 0.00025773893172794575,
+      "validation": {
+        "loss": 8.37191852731678e-08,
+        "perplexity": 1.0000000837191887
+      }
+    },
+    "10": {
+      "train_loss": 0.0002162905098876572,
+      "validation": {
+        "loss": 1.4451821410688127e-07,
+        "perplexity": 1.0000001445182245
+      }
+    },
+    "11": {
+      "train_loss": 0.0001770131968659412,
+      "validation": {
+        "loss": 2.9159536711157823e-08,
+        "perplexity": 1.0000000291595372
+      }
+    },
+    "12": {
+      "train_loss": 0.00014936323018059492,
+      "validation": {
+        "loss": 1.0007983101504674e-08,
+        "perplexity": 1.000000010007983
+      }
+    },
+    "13": {
+      "train_loss": 0.00011777641932680847,
+      "validation": {
+        "loss": 7.3894066236294504e-09,
+        "perplexity": 1.0000000073894066
+      }
+    },
+    "14": {
+      "train_loss": 0.00010040076467301,
+      "validation": {
+        "loss": 7.82483023561061e-09,
+        "perplexity": 1.0000000078248303
+      }
+    },
+    "15": {
+      "train_loss": 8.540619317510794e-05,
+      "validation": {
+        "loss": 2.5688646043686704e-09,
+        "perplexity": 1.0000000025688647
+      }
+    },
+    "16": {
+      "train_loss": 6.268296002876945e-05,
+      "validation": {
+        "loss": 1.6501751511540283e-09,
+        "perplexity": 1.000000001650175
+      }
+    },
+    "17": {
+      "train_loss": 5.370991323505699e-05,
+      "validation": {
+        "loss": 1.0220282652591746e-09,
+        "perplexity": 1.0000000010220282
+      }
+    },
+    "18": {
+      "train_loss": 4.231928164564392e-05,
+      "validation": {
+        "loss": 7.411761160832271e-10,
+        "perplexity": 1.000000000741176
+      }
+    },
+    "19": {
+      "train_loss": 3.614518471157562e-05,
+      "validation": {
+        "loss": 6.058424265736884e-10,
+        "perplexity": 1.0000000006058425
+      }
+    },
+    "20": {
+      "train_loss": 2.845142545937342e-05,
+      "validation": {
+        "loss": 3.987215545000108e-10,
+        "perplexity": 1.0000000003987215
+      }
+    }
+  },
+  "final_test_results": {
+    "loss": 3.4014825975711306e-10,
+    "perplexity": 1.0000000003401484
+  }
+}

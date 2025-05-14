@@ -1,0 +1,180 @@
+{
+  "args": {
+    "task": "lm",
+    "glue_task": "sst2",
+    "lm_dataset_name": "wikitext",
+    "lm_dataset_config": "wikitext-103-raw-v1",
+    "transformer_type": "ospa",
+    "tokenizer_name": "bert-base-uncased",
+    "d_model": 256,
+    "nhead": 4,
+    "nlayers": 4,
+    "dim_feedforward": 1024,
+    "dropout": 0.1,
+    "orth_mode": "regularize",
+    "orth_penalty_weight": 0.001,
+    "max_seq_len": 128,
+    "epochs": 20,
+    "batch_size": 64,
+    "gradient_accumulation_steps": 4,
+    "lr": 0.0005,
+    "weight_decay": 0.01,
+    "clip": 1.0,
+    "scheduler_update_every_step": true,
+    "device": "cuda",
+    "num_workers": 0,
+    "seed": 42,
+    "log_interval": 100,
+    "output_dir": "Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm",
+    "save": "best_model.pt",
+    "loglevel": "ERROR",
+    "num_labels": 30522,
+    "is_regression": false
+  },
+  "epochs": {
+    "1": {
+      "train_loss": 7.144910097995551,
+      "validation": {
+        "loss": 1.8581933538118998,
+        "perplexity": 6.412141829010729
+      }
+    },
+    "2": {
+      "train_loss": 0.5362813470195308,
+      "validation": {
+        "loss": 0.014228462862471739,
+        "perplexity": 1.0143301692428415
+      }
+    },
+    "3": {
+      "train_loss": 0.011761221115822373,
+      "validation": {
+        "loss": 0.000459569574741181,
+        "perplexity": 1.0004596751930173
+      }
+    },
+    "4": {
+      "train_loss": 0.0018209967567171994,
+      "validation": {
+        "loss": 6.737727727947155e-05,
+        "perplexity": 1.0000673795471793
+      }
+    },
+    "5": {
+      "train_loss": 0.0011985194839143126,
+      "validation": {
+        "loss": 4.138804094585188e-05,
+        "perplexity": 1.0000413888974427
+      }
+    },
+    "6": {
+      "train_loss": 0.0006859294532296748,
+      "validation": {
+        "loss": 2.9043644569052655e-06,
+        "perplexity": 1.0000029043686747
+      }
+    },
+    "7": {
+      "train_loss": 0.0005608042087308122,
+      "validation": {
+        "loss": 1.5090779517853055e-06,
+        "perplexity": 1.0000015090790904
+      }
+    },
+    "8": {
+      "train_loss": 0.0004692787089149825,
+      "validation": {
+        "loss": 1.08728305547127e-06,
+        "perplexity": 1.0000010872836467
+      }
+    },
+    "9": {
+      "train_loss": 0.0003720785828619209,
+      "validation": {
+        "loss": 5.189685564251552e-08,
+        "perplexity": 1.000000051896857
+      }
+    },
+    "10": {
+      "train_loss": 0.00030068376599372715,
+      "validation": {
+        "loss": 1.232130289944659e-07,
+        "perplexity": 1.0000001232130367
+      }
+    },
+    "11": {
+      "train_loss": 0.0002509595785193456,
+      "validation": {
+        "loss": 3.4158574213627445e-08,
+        "perplexity": 1.0000000341585749
+      }
+    },
+    "12": {
+      "train_loss": 0.00020258029828429156,
+      "validation": {
+        "loss": 2.09269842195899e-08,
+        "perplexity": 1.0000000209269844
+      }
+    },
+    "13": {
+      "train_loss": 0.00015764449585940613,
+      "validation": {
+        "loss": 2.4402641540799407e-08,
+        "perplexity": 1.000000024402642
+      }
+    },
+    "14": {
+      "train_loss": 0.0001133558534011926,
+      "validation": {
+        "loss": 2.051600313524027e-08,
+        "perplexity": 1.0000000205160033
+      }
+    },
+    "15": {
+      "train_loss": 9.349450101105226e-05,
+      "validation": {
+        "loss": 2.280632947770922e-09,
+        "perplexity": 1.000000002280633
+      }
+    },
+    "16": {
+      "train_loss": 6.321596270400703e-05,
+      "validation": {
+        "loss": 1.0200709320053643e-09,
+        "perplexity": 1.000000001020071
+      }
+    },
+    "17": {
+      "train_loss": 4.2796664000995736e-05,
+      "validation": {
+        "loss": 1.2072822347155195e-09,
+        "perplexity": 1.0000000012072823
+      }
+    },
+    "18": {
+      "train_loss": 2.788172118985189e-05,
+      "validation": {
+        "loss": 7.450401544549049e-10,
+        "perplexity": 1.0000000007450403
+      }
+    },
+    "19": {
+      "train_loss": 1.62728858711218e-05,
+      "validation": {
+        "loss": 6.756732529091906e-10,
+        "perplexity": 1.0000000006756733
+      }
+    },
+    "20": {
+      "train_loss": 8.803578656544314e-06,
+      "validation": {
+        "loss": 3.6088249064439306e-10,
+        "perplexity": 1.0000000003608824
+      }
+    }
+  },
+  "final_test_results": {
+    "loss": 1.415938949918459e-10,
+    "perplexity": 1.0000000001415938
+  }
+}

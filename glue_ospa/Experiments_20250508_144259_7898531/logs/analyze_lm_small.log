@@ -1,0 +1,64 @@
+--- Analysis Run for lm_small --- Sun May 11 01:09:49 CDT 2025
+2025-05-11 01:09:51,899 - INFO - Comparing 4 models.
+2025-05-11 01:09:51,899 - INFO - --- Analyzing Model: Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm/best_model.pt ---
+2025-05-11 01:09:51,971 - INFO - Successfully loaded state dict from Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm/best_model.pt
+2025-05-11 01:09:51,971 - INFO - Inferred model type: vanilla
+2025-05-11 01:09:51,971 - INFO - Expecting 4 layers based on args.
+2025-05-11 01:09:51,971 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-11 01:09:51,971 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-11 01:09:51,971 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-11 01:09:51,971 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-11 01:09:51,987 - INFO - Generated 16 head vectors across 4 layers.
+2025-05-11 01:09:51,995 - INFO - Saved analysis metrics to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/analysis_metrics.json
+2025-05-11 01:09:52,565 - INFO - Saved head similarity heatmap to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/head_similarity.png
+2025-05-11 01:09:52,566 - INFO - --- Analysis complete for: Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm/best_model.pt ---
+2025-05-11 01:09:52,566 - INFO - --- Analyzing Model: Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm/best_model.pt ---
+2025-05-11 01:09:52,634 - INFO - Successfully loaded state dict from Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm/best_model.pt
+2025-05-11 01:09:52,634 - INFO - Inferred model type: ospa
+2025-05-11 01:09:52,634 - INFO - Expecting 4 layers based on args.
+2025-05-11 01:09:52,634 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-11 01:09:52,634 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-11 01:09:52,634 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-11 01:09:52,634 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-11 01:09:52,636 - INFO - Generated 16 head vectors across 4 layers.
+2025-05-11 01:09:52,639 - INFO - Checking orthogonality for OSPA model...
+2025-05-11 01:09:52,735 - INFO - Overall Avg Orthogonality Error (Squared Norm): 9.5607e+02
+2025-05-11 01:09:52,739 - INFO - Saved analysis metrics to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/analysis_metrics.json
+2025-05-11 01:09:53,296 - INFO - Saved head similarity heatmap to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/head_similarity.png
+2025-05-11 01:09:53,907 - INFO - Saved orthogonality error plot to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/orthogonality_error.png
+2025-05-11 01:09:53,908 - INFO - --- Analysis complete for: Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm/best_model.pt ---
+2025-05-11 01:09:53,908 - INFO - --- Analyzing Model: Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm/best_model.pt ---
+2025-05-11 01:09:53,963 - INFO - Successfully loaded state dict from Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm/best_model.pt
+2025-05-11 01:09:53,963 - INFO - Inferred model type: ospa
+2025-05-11 01:09:53,963 - INFO - Expecting 4 layers based on args.
+2025-05-11 01:09:53,963 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-11 01:09:53,963 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-11 01:09:53,963 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-11 01:09:53,963 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-11 01:09:53,965 - INFO - Generated 16 head vectors across 4 layers.
+2025-05-11 01:09:53,969 - INFO - Checking orthogonality for OSPA model...
+2025-05-11 01:09:53,976 - INFO - Overall Avg Orthogonality Error (Squared Norm): 9.2178e-06
+2025-05-11 01:09:53,981 - INFO - Saved analysis metrics to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/analysis_metrics.json
+2025-05-11 01:09:54,540 - INFO - Saved head similarity heatmap to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/head_similarity.png
+2025-05-11 01:09:55,071 - INFO - Saved orthogonality error plot to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/orthogonality_error.png
+2025-05-11 01:09:55,071 - INFO - --- Analysis complete for: Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm/best_model.pt ---
+2025-05-11 01:09:55,071 - INFO - --- Analyzing Model: Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm/best_model.pt ---
+2025-05-11 01:09:55,104 - INFO - Successfully loaded state dict from Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm/best_model.pt
+2025-05-11 01:09:55,104 - INFO - Inferred model type: ospa
+2025-05-11 01:09:55,104 - INFO - Expecting 4 layers based on args.
+2025-05-11 01:09:55,104 - INFO - Successfully extracted all projection weights for layer 0
+2025-05-11 01:09:55,104 - INFO - Successfully extracted all projection weights for layer 1
+2025-05-11 01:09:55,104 - INFO - Successfully extracted all projection weights for layer 2
+2025-05-11 01:09:55,104 - INFO - Successfully extracted all projection weights for layer 3
+2025-05-11 01:09:55,106 - INFO - Generated 16 head vectors across 4 layers.
+2025-05-11 01:09:55,110 - INFO - Checking orthogonality for OSPA model...
+2025-05-11 01:09:55,167 - INFO - Overall Avg Orthogonality Error (Squared Norm): 2.6517e-05
+2025-05-11 01:09:55,175 - INFO - Saved analysis metrics to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/analysis_metrics.json
+2025-05-11 01:09:55,727 - INFO - Saved head similarity heatmap to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/head_similarity.png
+2025-05-11 01:09:56,394 - INFO - Saved orthogonality error plot to Experiments_20250508_144259_7898531/analysis/lm/small/best_model/orthogonality_error.png
+2025-05-11 01:09:56,394 - INFO - --- Analysis complete for: Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm/best_model.pt ---
+2025-05-11 01:09:56,394 - INFO - --- Creating Comparison Visualizations for 4 Models ---
+2025-05-11 01:09:56,741 - INFO - Saved diversity comparison plot to Experiments_20250508_144259_7898531/analysis/lm/small/model_diversity_comparison.png
+2025-05-11 01:09:56,765 - INFO - Saved comparison data to Experiments_20250508_144259_7898531/analysis/lm/small/diversity_comparison_data.json
+2025-05-11 01:09:56,765 - INFO - --- Model Comparison Complete ---
+2025-05-11 01:09:56,765 - INFO - --- Analysis Script Finished ---

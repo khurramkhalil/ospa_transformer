@@ -1,0 +1,89 @@
+[2025-05-08_14:42:59] ===================================================
+[2025-05-08_14:42:59]         STARTING OSPA TRAINING & ANALYSIS PIPELINE     
+[2025-05-08_14:42:59] ===================================================
+[2025-05-08_14:42:59] Job ID: 7898531
+[2025-05-08_14:42:59] Host: g009.mgmt.hellbender
+[2025-05-08_14:42:59] Output Directory: Experiments_20250508_144259_7898531
+[2025-05-08_14:42:59] Started at: Thu May  8 14:42:59 CDT 2025
+[2025-05-08_14:42:59] Checking for Python scripts...
+[2025-05-08_14:42:59] ✓ Found required Python scripts.
+[2025-05-08_14:42:59] ===================================================
+[2025-05-08_14:42:59] ========== PROCESSING CONFIGURATION: small ==========
+[2025-05-08_14:42:59] ------ Starting Language Modeling Task (Size: small) ------
+[2025-05-08_14:42:59] --- Starting Training: small_vanilla_init_lm ---
+[2025-05-08_14:42:59]     Config: Size=small, Task=lm, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-08_14:42:59]     Output to: Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm
+[2025-05-08_14:42:59] Executing Training Command:
+python "train_ospa.py"         --task lm --lm_dataset_name wikitext --lm_dataset_config wikitext-103-raw-v1         --max_seq_len 128         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 5e-4         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm"         --save "best_model.pt"         --device cuda
+[2025-05-08_22:09:18] ✓ Training small_vanilla_init_lm completed. Model saved.
+[2025-05-08_22:09:18] --- Starting Training: small_ospa_init_lm ---
+[2025-05-08_22:09:18]     Config: Size=small, Task=lm, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-08_22:09:18]     Output to: Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm
+[2025-05-08_22:09:18] Executing Training Command:
+python "train_ospa.py"         --task lm --lm_dataset_name wikitext --lm_dataset_config wikitext-103-raw-v1         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 5e-4         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm"         --save "best_model.pt"         --device cuda
+[2025-05-09_07:15:23] ✓ Training small_ospa_init_lm completed. Model saved.
+[2025-05-09_07:15:23] --- Starting Training: small_ospa_reg0.001_lm ---
+[2025-05-09_07:15:23]     Config: Size=small, Task=lm, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-09_07:15:23]     Output to: Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm
+[2025-05-09_07:15:23] Executing Training Command:
+python "train_ospa.py"         --task lm --lm_dataset_name wikitext --lm_dataset_config wikitext-103-raw-v1         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 5e-4         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm"         --save "best_model.pt"         --device cuda
+[2025-05-09_17:01:17] ✓ Training small_ospa_reg0.001_lm completed. Model saved.
+[2025-05-09_17:01:17] --- Starting Training: small_ospa_strict_lm ---
+[2025-05-09_17:01:17]     Config: Size=small, Task=lm, Type=ospa, OrthMode=strict, Lambda=0.0
+[2025-05-09_17:01:17]     Output to: Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm
+[2025-05-09_17:01:17] Executing Training Command:
+python "train_ospa.py"         --task lm --lm_dataset_name wikitext --lm_dataset_config wikitext-103-raw-v1         --max_seq_len 128         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode strict         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 5e-4         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm"         --save "best_model.pt"         --device cuda
+[2025-05-11_01:09:49] ✓ Training small_ospa_strict_lm completed. Model saved.
+[2025-05-11_01:09:49] --- Starting Analysis for Config: Size=small, Task=lm ---
+[2025-05-11_01:09:49]     Analysis Output to: Experiments_20250508_144259_7898531/analysis/lm/small
+[2025-05-11_01:09:49]     Found model for analysis: Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm/best_model.pt
+[2025-05-11_01:09:49]     Found model for analysis: Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm/best_model.pt
+[2025-05-11_01:09:49]     Found model for analysis: Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm/best_model.pt
+[2025-05-11_01:09:49]     Found model for analysis: Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm/best_model.pt
+[2025-05-11_01:09:49] Executing Comparison Command for lm_small:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144259_7898531/lm/small/small_vanilla_init_lm/best_model.pt" "Experiments_20250508_144259_7898531/lm/small/small_ospa_init_lm/best_model.pt" "Experiments_20250508_144259_7898531/lm/small/small_ospa_reg0.001_lm/best_model.pt" "Experiments_20250508_144259_7898531/lm/small/small_ospa_strict_lm/best_model.pt"         --output_dir "Experiments_20250508_144259_7898531/analysis/lm/small"         --d_model 256         --nhead 4         --nlayers 4
+[2025-05-11_01:09:57] ✓ Comparison analysis for lm_small completed successfully.
+[2025-05-11_01:09:57] ------ Finished Language Modeling Task (Size: small) ------
+[2025-05-11_01:09:57] ------ Starting GLUE Task: sst2 (Size: small) ------
+[2025-05-11_01:09:57] --- Starting Training: small_vanilla_init_glue_sst2 ---
+[2025-05-11_01:09:57]     Config: Size=small, Task=glue/sst2, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-11_01:09:57]     Output to: Experiments_20250508_144259_7898531/glue/small/small_vanilla_init_glue_sst2
+[2025-05-11_01:09:57] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task sst2         --max_seq_len 64         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/glue/small/small_vanilla_init_glue_sst2"         --save "best_model.pt"         --device cuda
+[2025-05-11_01:28:16] ✓ Training small_vanilla_init_glue_sst2 completed. Model saved.
+[2025-05-11_01:28:16] --- Starting Training: small_ospa_init_glue_sst2 ---
+[2025-05-11_01:28:16]     Config: Size=small, Task=glue/sst2, Type=ospa, OrthMode=init, Lambda=0.0
+[2025-05-11_01:28:16]     Output to: Experiments_20250508_144259_7898531/glue/small/small_ospa_init_glue_sst2
+[2025-05-11_01:28:16] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task sst2         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/glue/small/small_ospa_init_glue_sst2"         --save "best_model.pt"         --device cuda
+[2025-05-11_01:52:29] ✓ Training small_ospa_init_glue_sst2 completed. Model saved.
+[2025-05-11_01:52:30] --- Starting Training: small_ospa_reg0.001_glue_sst2 ---
+[2025-05-11_01:52:30]     Config: Size=small, Task=glue/sst2, Type=ospa, OrthMode=regularize, Lambda=0.001
+[2025-05-11_01:52:30]     Output to: Experiments_20250508_144259_7898531/glue/small/small_ospa_reg0.001_glue_sst2
+[2025-05-11_01:52:30] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task sst2         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode regularize         --orth_penalty_weight 0.001         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/glue/small/small_ospa_reg0.001_glue_sst2"         --save "best_model.pt"         --device cuda
+[2025-05-11_02:22:10] ✓ Training small_ospa_reg0.001_glue_sst2 completed. Model saved.
+[2025-05-11_02:22:10] --- Starting Training: small_ospa_strict_glue_sst2 ---
+[2025-05-11_02:22:10]     Config: Size=small, Task=glue/sst2, Type=ospa, OrthMode=strict, Lambda=0.0
+[2025-05-11_02:22:10]     Output to: Experiments_20250508_144259_7898531/glue/small/small_ospa_strict_glue_sst2
+[2025-05-11_02:22:10] Executing Training Command:
+python "train_ospa.py"         --task glue --glue_task sst2         --max_seq_len 64         --transformer_type ospa         --tokenizer_name bert-base-uncased         --d_model 256         --nhead 4         --nlayers 4         --dim_feedforward 1024         --dropout 0.1         --orth_mode strict         --orth_penalty_weight 0.0         --epochs 20         --batch_size 64         --gradient_accumulation_steps 4         --lr 3e-5         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/glue/small/small_ospa_strict_glue_sst2"         --save "best_model.pt"         --device cuda
+[2025-05-11_04:29:19] ✓ Training small_ospa_strict_glue_sst2 completed. Model saved.
+[2025-05-11_04:29:19] --- Starting Analysis for Config: Size=small, Task=glue_sst2 ---
+[2025-05-11_04:29:19]     Analysis Output to: Experiments_20250508_144259_7898531/analysis/glue_sst2/small
+[2025-05-11_04:29:19]     Found model for analysis: Experiments_20250508_144259_7898531/glue/small/small_vanilla_init_glue_sst2/best_model.pt
+[2025-05-11_04:29:19]     Found model for analysis: Experiments_20250508_144259_7898531/glue/small/small_ospa_init_glue_sst2/best_model.pt
+[2025-05-11_04:29:19]     Found model for analysis: Experiments_20250508_144259_7898531/glue/small/small_ospa_reg0.001_glue_sst2/best_model.pt
+[2025-05-11_04:29:19]     Found model for analysis: Experiments_20250508_144259_7898531/glue/small/small_ospa_strict_glue_sst2/best_model.pt
+[2025-05-11_04:29:19] Executing Comparison Command for glue_sst2_small:
+python "analyze_head_diversity.py"         --model_paths "Experiments_20250508_144259_7898531/glue/small/small_vanilla_init_glue_sst2/best_model.pt" "Experiments_20250508_144259_7898531/glue/small/small_ospa_init_glue_sst2/best_model.pt" "Experiments_20250508_144259_7898531/glue/small/small_ospa_reg0.001_glue_sst2/best_model.pt" "Experiments_20250508_144259_7898531/glue/small/small_ospa_strict_glue_sst2/best_model.pt"         --output_dir "Experiments_20250508_144259_7898531/analysis/glue_sst2/small"         --d_model 256         --nhead 4         --nlayers 4
+[2025-05-11_04:29:27] ✓ Comparison analysis for glue_sst2_small completed successfully.
+[2025-05-11_04:29:27] ------ Finished GLUE Task: sst2 (Size: small) ------
+[2025-05-11_04:29:27] ========== FINISHED CONFIGURATION: small ==========
+[2025-05-11_04:29:27] ========== PROCESSING CONFIGURATION: medium ==========
+[2025-05-11_04:29:27] ------ Starting Language Modeling Task (Size: medium) ------
+[2025-05-11_04:29:27] --- Starting Training: medium_vanilla_init_lm ---
+[2025-05-11_04:29:27]     Config: Size=medium, Task=lm, Type=vanilla, OrthMode=init, Lambda=0.0
+[2025-05-11_04:29:27]     Output to: Experiments_20250508_144259_7898531/lm/medium/medium_vanilla_init_lm
+[2025-05-11_04:29:27] Executing Training Command:
+python "train_ospa.py"         --task lm --lm_dataset_name wikitext --lm_dataset_config wikitext-103-raw-v1         --max_seq_len 128         --transformer_type vanilla         --tokenizer_name bert-base-uncased         --d_model 512         --nhead 8         --nlayers 6         --dim_feedforward 2048         --dropout 0.1         --orth_mode init         --orth_penalty_weight 0.0         --epochs 25         --batch_size 32         --gradient_accumulation_steps 4         --lr 5e-4         --weight_decay 0.01         --clip 1.0         --scheduler_update_every_step         --seed 42         --num_workers 0         --log_interval 100         --output_dir "Experiments_20250508_144259_7898531/lm/medium/medium_vanilla_init_lm"         --save "best_model.pt"         --device cuda
