@@ -38,7 +38,7 @@ CLIP_GRAD = 1.0
 
 # Logging Configuration
 MODEL_BASE_NAME = "GPA_Ablation"
-LOG_DIR = "logs_gpa_imdb_ablations"
+LOG_DIR = "new_logs_gpa_imdb_ablations"
 os.makedirs(LOG_DIR, exist_ok=True)
 
 # Global log_file variable, will be updated by run_experiment
